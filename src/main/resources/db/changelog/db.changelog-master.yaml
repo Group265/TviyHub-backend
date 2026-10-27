@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/changes/02-create-core-tables-and-seed.yaml
   - include:
       file: db/changelog/changes/03-create-subscriptions-table.yaml
+  - include:
+      file: db/changelog/changes/04-add-blocked-to-users.yaml

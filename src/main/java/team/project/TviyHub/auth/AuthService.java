@@ -7,6 +7,7 @@ import team.project.TviyHub.auth.dto.AuthResponse;
 import team.project.TviyHub.auth.dto.LoginRequest;
 import team.project.TviyHub.auth.dto.RegisterRequest;
 import team.project.TviyHub.exception.ConflictException;
+import team.project.TviyHub.exception.ForbiddenException;
 import team.project.TviyHub.exception.UnauthorizedException;
 import team.project.TviyHub.security.JwtService;
 import team.project.TviyHub.security.LoginAttemptService;
@@ -74,6 +75,9 @@ public class AuthService {
 		}
 
 		loginAttemptService.recordSuccess(attemptKey);
+		if (user.get().isBlocked()) {
+			throw new ForbiddenException("Account is blocked");
+		}
 		return new AuthResponse(jwtService.generateToken(user.get()), "Bearer", jwtService.getLifetimeSeconds());
 	}
 }

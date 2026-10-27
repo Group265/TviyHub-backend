@@ -51,6 +51,14 @@ public class User implements UserDetails {
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
+	@Column(name = "is_blocked", nullable = false)
+	private boolean blocked;
+
+	@Override
+	public boolean isEnabled() {
+		return !blocked;
+	}
+
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
 		return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
