@@ -1,18 +1,25 @@
 package team.project.TviyHub.user;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import team.project.TviyHub.user.dto.UpdateProfileRequest;
-import team.project.TviyHub.user.dto.UserResponse;
+import team.project.TviyHub.common.exception.BadRequestException;
 import team.project.TviyHub.common.exception.ConflictException;
 import team.project.TviyHub.common.exception.UnauthorizedException;
+import team.project.TviyHub.user.dto.ChangeEmailRequest;
+import team.project.TviyHub.user.dto.ChangePasswordRequest;
+import team.project.TviyHub.user.dto.UpdateProfileRequest;
+import team.project.TviyHub.user.dto.UserResponse;
+
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
 	private final UserRepository userRepository;
+	private final PasswordEncoder passwordEncoder;
 
 	@Transactional(readOnly = true)
 	public UserResponse getProfile(Long userId) {
@@ -22,13 +29,43 @@ public class UserService {
 	@Transactional
 	public UserResponse updateProfile(Long userId, UpdateProfileRequest request) {
 		User user = find(userId);
-		String phone = request.phone().trim();
-		if (userRepository.existsByPhoneAndIdNot(phone, userId)) {
-			throw new ConflictException("Phone is already registered");
+		if (request.phone() != null) {
+			String phone = request.phone().trim();
+			if (userRepository.existsByPhoneAndIdNot(phone, userId)) {
+				throw new ConflictException("Phone is already registered");
+			}
+			user.setPhone(phone);
 		}
-		user.setName(request.name().trim());
-		user.setPhone(phone);
+		if (request.name() != null) {
+			user.setName(request.name().trim());
+		}
 		return UserResponse.from(userRepository.saveAndFlush(user));
+	}
+
+	@Transactional
+	public UserResponse changeEmail(Long userId, ChangeEmailRequest request) {
+		User user = find(userId);
+		requireCurrentPassword(user, request.currentPassword());
+		String email = request.newEmail().trim().toLowerCase(Locale.ROOT);
+		if (userRepository.existsByEmailAndIdNot(email, userId)) {
+			throw new ConflictException("Email is already registered");
+		}
+		user.setEmail(email);
+		return UserResponse.from(userRepository.saveAndFlush(user));
+	}
+
+	@Transactional
+	public void changePassword(Long userId, ChangePasswordRequest request) {
+		User user = find(userId);
+		requireCurrentPassword(user, request.currentPassword());
+		user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+		userRepository.saveAndFlush(user);
+	}
+
+	private void requireCurrentPassword(User user, String currentPassword) {
+		if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+			throw new BadRequestException("Current password is incorrect");
+		}
 	}
 
 	private User find(Long userId) {
