@@ -38,6 +38,11 @@ public class GlobalExceptionHandler {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
 	}
 
+	@ExceptionHandler(TooManyRequestsException.class)
+	public ProblemDetail handleTooManyRequests(TooManyRequestsException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+	}
+
 	@ExceptionHandler(UnauthorizedException.class)
 	public ProblemDetail handleUnauthorized(UnauthorizedException ex) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());

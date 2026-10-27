@@ -15,11 +15,13 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import team.project.TviyHub.security.JwtAuthenticationFilter;
+import team.project.TviyHub.security.RateLimitFilter;
 
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+	private final RateLimitFilter rateLimitFilter;
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
 	@Bean
@@ -41,6 +43,7 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
 						.requestMatchers("/admin/**").hasRole("ADMIN")
 						.anyRequest().authenticated())
+				.addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
 	}
