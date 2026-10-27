@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-blocked-to-users
+      author: tea
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: is_blocked
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
