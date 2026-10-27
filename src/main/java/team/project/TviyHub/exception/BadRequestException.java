@@ -1,4 +1,4 @@
-package team.project.TviyHub.common.exception;
+package team.project.TviyHub.exception;
 
 public class BadRequestException extends RuntimeException {
 

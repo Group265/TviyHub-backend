@@ -1,4 +1,4 @@
-package team.project.TviyHub.common.exception;
+package team.project.TviyHub.exception;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -26,6 +26,11 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(ConflictException.class)
 	public ProblemDetail handleConflict(ConflictException ex) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+	}
+
+	@ExceptionHandler(ResourceNotFoundException.class)
+	public ProblemDetail handleNotFound(ResourceNotFoundException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
 	}
 
 	@ExceptionHandler(BadRequestException.class)

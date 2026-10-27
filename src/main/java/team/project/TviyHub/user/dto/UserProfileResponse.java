@@ -5,7 +5,7 @@ import team.project.TviyHub.user.User;
 
 import java.time.Instant;
 
-public record UserResponse(
+public record UserProfileResponse(
 		Long id,
 		String name,
 		String phone,
@@ -14,8 +14,8 @@ public record UserResponse(
 		Instant createdAt
 ) {
 
-	public static UserResponse from(User user) {
-		return new UserResponse(user.getId(), user.getName(), user.getPhone(),
+	public static UserProfileResponse from(User user) {
+		return new UserProfileResponse(user.getId(), user.getName(), user.getPhone(),
 				user.getEmail(), user.getRole(), user.getCreatedAt());
 	}
 }

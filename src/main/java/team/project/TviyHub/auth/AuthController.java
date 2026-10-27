@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import team.project.TviyHub.auth.dto.LoginRequest;
 import team.project.TviyHub.auth.dto.RegisterRequest;
-import team.project.TviyHub.auth.dto.TokenResponse;
-import team.project.TviyHub.user.dto.UserResponse;
+import team.project.TviyHub.auth.dto.AuthResponse;
+import team.project.TviyHub.user.dto.UserProfileResponse;
 
 @RestController
 @RequestMapping("/auth")
@@ -22,12 +22,12 @@ public class AuthController {
 
 	@PostMapping("/register")
 	@ResponseStatus(HttpStatus.CREATED)
-	public UserResponse register(@Valid @RequestBody RegisterRequest request) {
+	public UserProfileResponse register(@Valid @RequestBody RegisterRequest request) {
 		return authService.register(request);
 	}
 
 	@PostMapping("/login")
-	public TokenResponse login(@Valid @RequestBody LoginRequest request) {
+	public AuthResponse login(@Valid @RequestBody LoginRequest request) {
 		return authService.login(request);
 	}
 }
