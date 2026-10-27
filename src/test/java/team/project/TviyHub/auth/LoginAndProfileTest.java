@@ -76,6 +76,34 @@ class LoginAndProfileTest {
 	}
 
 	@Test
+	void locksLoginAfterRepeatedFailuresEvenWithCorrectPassword() throws Exception {
+		mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+				{"name":"Lock","phone":"+380991112299","email":"lock@b.com","password":"password123"}
+				""")).andExpect(status().isCreated());
+
+		for (int i = 0; i < 5; i++) {
+			mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+							.content("{\"email\":\"lock@b.com\",\"password\":\"wrong-password\"}"))
+					.andExpect(status().isUnauthorized());
+		}
+		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+						.content("{\"email\":\"lock@b.com\",\"password\":\"password123\"}"))
+				.andExpect(status().isTooManyRequests());
+	}
+
+	@Test
+	void locksLoginForUnknownEmailToo() throws Exception {
+		for (int i = 0; i < 5; i++) {
+			mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+							.content("{\"email\":\"ghost@b.com\",\"password\":\"whatever123\"}"))
+					.andExpect(status().isUnauthorized());
+		}
+		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+						.content("{\"email\":\"ghost@b.com\",\"password\":\"whatever123\"}"))
+				.andExpect(status().isTooManyRequests());
+	}
+
+	@Test
 	void profileRequiresToken() throws Exception {
 		mockMvc.perform(get("/users/me")).andExpect(status().isUnauthorized());
 	}
