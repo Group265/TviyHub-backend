@@ -1,4 +1,4 @@
-package team.project.TviyHub.auth;
+package team.project.TviyHub.security;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -7,7 +7,6 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
-import team.project.TviyHub.auth.dto.TokenResponse;
 import team.project.TviyHub.user.User;
 
 import java.time.Duration;
@@ -24,7 +23,11 @@ public class JwtService {
 		this.lifetime = Duration.ofMinutes(expirationMinutes);
 	}
 
-	public TokenResponse issueToken(User user) {
+	public long getLifetimeSeconds() {
+		return lifetime.toSeconds();
+	}
+
+	public String generateToken(User user) {
 		Instant now = Instant.now();
 		JwtClaimsSet claims = JwtClaimsSet.builder()
 				.subject(String.valueOf(user.getId()))
@@ -33,7 +36,6 @@ public class JwtService {
 				.claim("role", user.getRole().name())
 				.build();
 		JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
-		String token = jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
-		return new TokenResponse(token, "Bearer", lifetime.toSeconds());
+		return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
 	}
 }

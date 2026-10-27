@@ -4,13 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import team.project.TviyHub.common.exception.BadRequestException;
-import team.project.TviyHub.common.exception.ConflictException;
-import team.project.TviyHub.common.exception.UnauthorizedException;
+import team.project.TviyHub.exception.BadRequestException;
+import team.project.TviyHub.exception.ConflictException;
+import team.project.TviyHub.exception.UnauthorizedException;
 import team.project.TviyHub.user.dto.ChangeEmailRequest;
 import team.project.TviyHub.user.dto.ChangePasswordRequest;
-import team.project.TviyHub.user.dto.UpdateProfileRequest;
-import team.project.TviyHub.user.dto.UserResponse;
+import team.project.TviyHub.user.dto.UpdateUserDto;
+import team.project.TviyHub.user.dto.UserProfileResponse;
 
 import java.util.Locale;
 
@@ -22,12 +22,12 @@ public class UserService {
 	private final PasswordEncoder passwordEncoder;
 
 	@Transactional(readOnly = true)
-	public UserResponse getProfile(Long userId) {
-		return UserResponse.from(find(userId));
+	public UserProfileResponse getProfile(Long userId) {
+		return UserProfileResponse.from(find(userId));
 	}
 
 	@Transactional
-	public UserResponse updateProfile(Long userId, UpdateProfileRequest request) {
+	public UserProfileResponse updateProfile(Long userId, UpdateUserDto request) {
 		User user = find(userId);
 		if (request.phone() != null) {
 			String phone = request.phone().trim();
@@ -39,11 +39,11 @@ public class UserService {
 		if (request.name() != null) {
 			user.setName(request.name().trim());
 		}
-		return UserResponse.from(userRepository.saveAndFlush(user));
+		return UserProfileResponse.from(userRepository.saveAndFlush(user));
 	}
 
 	@Transactional
-	public UserResponse changeEmail(Long userId, ChangeEmailRequest request) {
+	public UserProfileResponse changeEmail(Long userId, ChangeEmailRequest request) {
 		User user = find(userId);
 		requireCurrentPassword(user, request.currentPassword());
 		String email = request.newEmail().trim().toLowerCase(Locale.ROOT);
@@ -51,7 +51,7 @@ public class UserService {
 			throw new ConflictException("Email is already registered");
 		}
 		user.setEmail(email);
-		return UserResponse.from(userRepository.saveAndFlush(user));
+		return UserProfileResponse.from(userRepository.saveAndFlush(user));
 	}
 
 	@Transactional
