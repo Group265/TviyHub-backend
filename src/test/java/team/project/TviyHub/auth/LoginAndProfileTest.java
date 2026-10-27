@@ -8,13 +8,17 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import team.project.TviyHub.TestcontainersConfig;
+import team.project.TviyHub.user.Role;
+import team.project.TviyHub.user.User;
 import team.project.TviyHub.user.UserRepository;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -28,6 +32,9 @@ class LoginAndProfileTest {
 
 	@Autowired
 	private UserRepository userRepository;
+
+	@Autowired
+	private PasswordEncoder passwordEncoder;
 
 	@BeforeEach
 	void cleanUp() throws Exception {
@@ -81,15 +88,122 @@ class LoginAndProfileTest {
 				.andExpect(jsonPath("$.role").value("USER"));
 	}
 
+	private ResultActions patchMe(String json) throws Exception {
+		return mockMvc.perform(patch("/users/me")
+				.header("Authorization", "Bearer " + login("a@b.com", "password123"))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(json));
+	}
+
 	@Test
 	void updatesProfile() throws Exception {
-		mockMvc.perform(put("/users/me")
-						.header("Authorization", "Bearer " + login("a@b.com", "password123"))
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("{\"name\":\"New Name\",\"phone\":\"+380991112233\"}"))
+		patchMe("{\"name\":\"New Name\",\"phone\":\"+380991112233\"}")
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.name").value("New Name"))
 				.andExpect(jsonPath("$.phone").value("+380991112233"));
+	}
+
+	@Test
+	void updatesOnlyProvidedFields() throws Exception {
+		patchMe("{\"name\":\"Only Name\"}")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.name").value("Only Name"))
+				.andExpect(jsonPath("$.phone").value("+380671234567"));
+	}
+
+	@Test
+	void rejectsBlankNameAndInvalidPhone() throws Exception {
+		patchMe("{\"name\":\"   \"}").andExpect(status().isBadRequest());
+		patchMe("{\"phone\":\"0671234567\"}").andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void rejectsPhoneUsedByAnotherUser() throws Exception {
+		mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+				{"name":"Other","phone":"+380991112233","email":"c@d.com","password":"password123"}
+				""")).andExpect(status().isCreated());
+		patchMe("{\"phone\":\"+380991112233\"}").andExpect(status().isConflict());
+	}
+
+	@Test
+	void cannotChangeOwnRole() throws Exception {
+		patchMe("{\"name\":\"Hacker\",\"role\":\"ADMIN\"}")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.role").value("USER"));
+		mockMvc.perform(get("/users/me").header("Authorization", "Bearer " + login("a@b.com", "password123")))
+				.andExpect(jsonPath("$.role").value("USER"));
+	}
+
+	@Test
+	void registrationIgnoresRequestedRole() throws Exception {
+		mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+				{"name":"Sneaky","phone":"+380991112233","email":"s@b.com","password":"password123","role":"ADMIN"}
+				""")).andExpect(status().isCreated())
+				.andExpect(jsonPath("$.role").value("USER"));
+	}
+
+	private ResultActions patchAsUser(String path, String json) throws Exception {
+		return mockMvc.perform(patch(path)
+				.header("Authorization", "Bearer " + login("a@b.com", "password123"))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(json));
+	}
+
+	@Test
+	void changesEmailAndLogsInWithNewOne() throws Exception {
+		patchAsUser("/users/me/email", "{\"newEmail\":\"New@B.com\",\"currentPassword\":\"password123\"}")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.email").value("new@b.com"));
+		login("new@b.com", "password123");
+		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+						.content("{\"email\":\"a@b.com\",\"password\":\"password123\"}"))
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void rejectsEmailChangeWithWrongPasswordInvalidOrTakenEmail() throws Exception {
+		patchAsUser("/users/me/email", "{\"newEmail\":\"x@b.com\",\"currentPassword\":\"wrong-password\"}")
+				.andExpect(status().isBadRequest());
+		patchAsUser("/users/me/email", "{\"newEmail\":\"not-an-email\",\"currentPassword\":\"password123\"}")
+				.andExpect(status().isBadRequest());
+		mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+				{"name":"Other","phone":"+380991112233","email":"c@d.com","password":"password123"}
+				""")).andExpect(status().isCreated());
+		patchAsUser("/users/me/email", "{\"newEmail\":\"C@d.com\",\"currentPassword\":\"password123\"}")
+				.andExpect(status().isConflict());
+	}
+
+	@Test
+	void changesPassword() throws Exception {
+		patchAsUser("/users/me/password", "{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\"}")
+				.andExpect(status().isNoContent());
+		login("a@b.com", "newpassword456");
+		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+						.content("{\"email\":\"a@b.com\",\"password\":\"password123\"}"))
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void rejectsPasswordChangeWithWrongCurrentOrShortNew() throws Exception {
+		patchAsUser("/users/me/password", "{\"currentPassword\":\"wrong-password\",\"newPassword\":\"newpassword456\"}")
+				.andExpect(status().isBadRequest());
+		patchAsUser("/users/me/password", "{\"currentPassword\":\"password123\",\"newPassword\":\"short\"}")
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void adminPassesAdminAreaRule() throws Exception {
+		User admin = new User();
+		admin.setName("Admin");
+		admin.setPhone("+380500000000");
+		admin.setEmail("admin@b.com");
+		admin.setPasswordHash(passwordEncoder.encode("password123"));
+		admin.setRole(Role.ADMIN);
+		userRepository.saveAndFlush(admin);
+
+		// authorized, but no such handler exists yet, so 404 rather than 401/403
+		mockMvc.perform(get("/admin/anything").header("Authorization", "Bearer " + login("admin@b.com", "password123")))
+				.andExpect(status().isNotFound());
 	}
 
 	@Test
