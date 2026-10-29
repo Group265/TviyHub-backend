@@ -105,7 +105,10 @@ class LoginAndProfileTest {
 
 	@Test
 	void profileRequiresToken() throws Exception {
-		mockMvc.perform(get("/users/me")).andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/users/me"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.status").value(401))
+				.andExpect(jsonPath("$.detail").value("Authentication required"));
 	}
 
 	@Test
@@ -186,6 +189,8 @@ class LoginAndProfileTest {
 	@Test
 	void userCannotAccessAdminArea() throws Exception {
 		mockMvc.perform(get("/admin/anything").header("Authorization", "Bearer " + login("a@b.com", "password123")))
-				.andExpect(status().isForbidden());
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.status").value(403))
+				.andExpect(jsonPath("$.detail").value("Access denied"));
 	}
 }

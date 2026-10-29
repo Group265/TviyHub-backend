@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,6 +34,7 @@ import team.project.TviyHub.user.dto.UserStatsResponse;
 @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
 @ApiResponse(responseCode = "401", description = "Authentication required")
 @ApiResponse(responseCode = "403", description = "ADMIN role required")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
 
 	private final AdminUserService adminUserService;
