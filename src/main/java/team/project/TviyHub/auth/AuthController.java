@@ -22,7 +22,7 @@ import team.project.TviyHub.auth.dto.RefreshTokenRequest;
 import team.project.TviyHub.user.dto.UserProfileResponse;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Tag(name = "Auth", description = "Registration and login (public endpoints)")
 public class AuthController {

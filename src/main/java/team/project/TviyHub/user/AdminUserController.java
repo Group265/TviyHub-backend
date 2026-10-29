@@ -28,7 +28,7 @@ import team.project.TviyHub.user.dto.ResetPasswordRequest;
 import team.project.TviyHub.user.dto.UserStatsResponse;
 
 @RestController
-@RequestMapping("/admin/users")
+@RequestMapping("/api/admin/users")
 @RequiredArgsConstructor
 @Tag(name = "Admin: users", description = "User management (ADMIN role only)")
 @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)

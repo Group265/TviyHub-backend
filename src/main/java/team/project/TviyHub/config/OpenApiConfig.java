@@ -18,7 +18,7 @@ public class OpenApiConfig {
 				.info(new Info()
 						.title("TviyHub API")
 						.version("0.0.1")
-						.description("Backend of the TviyHub coworking space. Get a token via POST /auth/login "
+						.description("Backend of the TviyHub coworking space. Get a token via POST /api/auth/login "
 								+ "and send it in the Authorization: Bearer <token> header."))
 				.components(new Components().addSecuritySchemes(BEARER_AUTH, new SecurityScheme()
 						.type(SecurityScheme.Type.HTTP)
