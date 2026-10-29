@@ -27,7 +27,7 @@ import team.project.TviyHub.user.dto.UserProfileResponse;
 import java.util.Locale;
 import java.util.Optional;
 
-	@Service
+@Service
 public class AuthService {
 
 	private final UserRepository userRepository;

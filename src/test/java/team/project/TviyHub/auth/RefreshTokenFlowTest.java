@@ -79,7 +79,7 @@ class RefreshTokenFlowTest {
 	}
 
 	private String loginResponse(String email) throws Exception {
-		return postJson("/auth/login", "{\"email\":\"%s\",\"password\":\"%s\"}".formatted(email, PASSWORD))
+		return postJson("/api/auth/login", "{\"email\":\"%s\",\"password\":\"%s\"}".formatted(email, PASSWORD))
 				.andExpect(status().isOk())
 				.andReturn().getResponse().getContentAsString();
 	}
@@ -89,7 +89,7 @@ class RefreshTokenFlowTest {
 	}
 
 	private String refresh(String refreshToken) throws Exception {
-		String response = postJson("/auth/refresh", body(refreshToken))
+		String response = postJson("/api/auth/refresh", body(refreshToken))
 				.andExpect(status().isOk())
 				.andReturn().getResponse().getContentAsString();
 		return JsonPath.read(response, "$.refreshToken");
@@ -97,7 +97,7 @@ class RefreshTokenFlowTest {
 
 	@Test
 	void loginReturnsAccessAndRefreshTokens() throws Exception {
-		postJson("/auth/login", "{\"email\":\"%s\",\"password\":\"%s\"}".formatted(EMAIL, PASSWORD))
+		postJson("/api/auth/login", "{\"email\":\"%s\",\"password\":\"%s\"}".formatted(EMAIL, PASSWORD))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.accessToken").isNotEmpty())
 				.andExpect(jsonPath("$.refreshToken").isNotEmpty())
@@ -109,14 +109,14 @@ class RefreshTokenFlowTest {
 	void refreshIssuesNewWorkingAccessTokenAndRotatesRefreshToken() throws Exception {
 		String first = refreshTokenFromLogin();
 
-		String response = postJson("/auth/refresh", body(first)).andExpect(status().isOk())
+		String response = postJson("/api/auth/refresh", body(first)).andExpect(status().isOk())
 				.andExpect(jsonPath("$.refreshToken").isNotEmpty())
 				.andReturn().getResponse().getContentAsString();
 		String access = JsonPath.read(response, "$.accessToken");
 		String second = JsonPath.read(response, "$.refreshToken");
 
 		assertThat(second).isNotEqualTo(first);
-		mockMvc.perform(get("/users/me").header("Authorization", "Bearer " + access))
+		mockMvc.perform(get("/api/users/me").header("Authorization", "Bearer " + access))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.email").value(EMAIL));
 		refresh(second);
@@ -127,36 +127,36 @@ class RefreshTokenFlowTest {
 		String first = refreshTokenFromLogin();
 		String second = refresh(first);
 
-		postJson("/auth/refresh", body(first)).andExpect(status().isUnauthorized());
+		postJson("/api/auth/refresh", body(first)).andExpect(status().isUnauthorized());
 		// the newer token of the same session is revoked too
-		postJson("/auth/refresh", body(second)).andExpect(status().isUnauthorized());
+		postJson("/api/auth/refresh", body(second)).andExpect(status().isUnauthorized());
 	}
 
 	@Test
 	void rejectsUnknownAndExpiredRefreshTokens() throws Exception {
-		postJson("/auth/refresh", body("not-a-real-token")).andExpect(status().isUnauthorized());
+		postJson("/api/auth/refresh", body("not-a-real-token")).andExpect(status().isUnauthorized());
 
 		String token = refreshTokenFromLogin();
 		refreshTokenRepository.findAll().forEach(t -> {
 			t.setExpiresAt(Instant.now().minusSeconds(60));
 			refreshTokenRepository.save(t);
 		});
-		postJson("/auth/refresh", body(token)).andExpect(status().isUnauthorized());
+		postJson("/api/auth/refresh", body(token)).andExpect(status().isUnauthorized());
 	}
 
 	@Test
 	void rejectsBlankRefreshToken() throws Exception {
-		postJson("/auth/refresh", "{\"refreshToken\":\"\"}").andExpect(status().isBadRequest());
+		postJson("/api/auth/refresh", "{\"refreshToken\":\"\"}").andExpect(status().isBadRequest());
 	}
 
 	@Test
 	void logoutRevokesSessionAndIsIdempotent() throws Exception {
 		String token = refreshTokenFromLogin();
 
-		postJson("/auth/logout", body(token)).andExpect(status().isNoContent());
-		postJson("/auth/refresh", body(token)).andExpect(status().isUnauthorized());
-		postJson("/auth/logout", body(token)).andExpect(status().isNoContent());
-		postJson("/auth/logout", body("unknown")).andExpect(status().isNoContent());
+		postJson("/api/auth/logout", body(token)).andExpect(status().isNoContent());
+		postJson("/api/auth/refresh", body(token)).andExpect(status().isUnauthorized());
+		postJson("/api/auth/logout", body(token)).andExpect(status().isNoContent());
+		postJson("/api/auth/logout", body("unknown")).andExpect(status().isNoContent());
 	}
 
 	@Test
@@ -164,7 +164,7 @@ class RefreshTokenFlowTest {
 		String laptop = refreshTokenFromLogin();
 		String phone = refreshTokenFromLogin();
 
-		postJson("/auth/logout", body(laptop)).andExpect(status().isNoContent());
+		postJson("/api/auth/logout", body(laptop)).andExpect(status().isNoContent());
 
 		refresh(phone);
 	}
@@ -173,11 +173,11 @@ class RefreshTokenFlowTest {
 	void passwordResetRevokesAllSessions() throws Exception {
 		String token = refreshTokenFromLogin();
 
-		postJson("/auth/forgot-password", "{\"email\":\"%s\"}".formatted(EMAIL)).andExpect(status().isNoContent());
-		postJson("/auth/reset-password", "{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\"}"
+		postJson("/api/auth/forgot-password", "{\"email\":\"%s\"}".formatted(EMAIL)).andExpect(status().isNoContent());
+		postJson("/api/auth/reset-password", "{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\"}"
 				.formatted(EMAIL, mail.lastCode(EMAIL))).andExpect(status().isNoContent());
 
-		postJson("/auth/refresh", body(token)).andExpect(status().isUnauthorized());
+		postJson("/api/auth/refresh", body(token)).andExpect(status().isUnauthorized());
 	}
 
 	@Test
@@ -186,16 +186,16 @@ class RefreshTokenFlowTest {
 		String access = JsonPath.read(loginResponse, "$.accessToken");
 		String token = JsonPath.read(loginResponse, "$.refreshToken");
 
-		mockMvc.perform(post("/users/me/password/request").header("Authorization", "Bearer " + access)
+		mockMvc.perform(post("/api/users/me/password/request").header("Authorization", "Bearer " + access)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\"}"))
 				.andExpect(status().isNoContent());
-		mockMvc.perform(post("/users/me/password/confirm").header("Authorization", "Bearer " + access)
+		mockMvc.perform(post("/api/users/me/password/confirm").header("Authorization", "Bearer " + access)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"code\":\"%s\"}".formatted(mail.lastCode(EMAIL))))
 				.andExpect(status().isNoContent());
 
-		postJson("/auth/refresh", body(token)).andExpect(status().isUnauthorized());
+		postJson("/api/auth/refresh", body(token)).andExpect(status().isUnauthorized());
 	}
 
 	@Test
@@ -205,11 +205,11 @@ class RefreshTokenFlowTest {
 		String adminLogin = loginResponse("admin@b.com");
 		String adminAccess = JsonPath.read(adminLogin, "$.accessToken");
 
-		mockMvc.perform(post("/admin/users/" + userId + "/block").header("Authorization", "Bearer " + adminAccess))
+		mockMvc.perform(post("/api/admin/users/" + userId + "/block").header("Authorization", "Bearer " + adminAccess))
 				.andExpect(status().isOk());
 
 		// the session was revoked, so the token counts as used and the request is refused
-		postJson("/auth/refresh", body(token)).andExpect(status().isUnauthorized());
+		postJson("/api/auth/refresh", body(token)).andExpect(status().isUnauthorized());
 	}
 
 	@Test
@@ -219,6 +219,6 @@ class RefreshTokenFlowTest {
 		user.setBlocked(true);
 		userRepository.saveAndFlush(user);
 
-		postJson("/auth/refresh", body(token)).andExpect(status().isForbidden());
+		postJson("/api/auth/refresh", body(token)).andExpect(status().isForbidden());
 	}
 }

@@ -24,7 +24,7 @@ import team.project.TviyHub.user.dto.UpdateUserDto;
 import team.project.TviyHub.user.dto.UserProfileResponse;
 
 @RestController
-@RequestMapping("/users/me")
+@RequestMapping("/api/users/me")
 @RequiredArgsConstructor
 @Tag(name = "Profile", description = "Profile of the current user")
 @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)

@@ -46,7 +46,7 @@ class VerificationFlowTest {
 	}
 
 	private void register(String name, String phone, String email) throws Exception {
-		mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON)
+		mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{"name":"%s","phone":"%s","email":"%s","password":"%s"}
 								""".formatted(name, phone, email, PASSWORD)))
@@ -64,12 +64,12 @@ class VerificationFlowTest {
 	}
 
 	private void verify(String email) throws Exception {
-		postJson("/auth/verify-email", "{\"email\":\"%s\",\"code\":\"%s\"}".formatted(email, mail.lastCode(email)))
+		postJson("/api/auth/verify-email", "{\"email\":\"%s\",\"code\":\"%s\"}".formatted(email, mail.lastCode(email)))
 				.andExpect(status().isNoContent());
 	}
 
 	private String login(String email, String password) throws Exception {
-		String response = postJson("/auth/login", "{\"email\":\"%s\",\"password\":\"%s\"}".formatted(email, password))
+		String response = postJson("/api/auth/login", "{\"email\":\"%s\",\"password\":\"%s\"}".formatted(email, password))
 				.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 		return JsonPath.read(response, "$.accessToken");
 	}
@@ -87,12 +87,12 @@ class VerificationFlowTest {
 	void registrationSendsCodeAndVerificationMarksEmailVerified() throws Exception {
 		assertThat(mail.lastCode(EMAIL)).hasSize(6);
 		String token = login(EMAIL, PASSWORD);
-		mockMvc.perform(get("/users/me").header("Authorization", "Bearer " + token))
+		mockMvc.perform(get("/api/users/me").header("Authorization", "Bearer " + token))
 				.andExpect(jsonPath("$.emailVerified").value(false));
 
 		verify(EMAIL);
 
-		mockMvc.perform(get("/users/me").header("Authorization", "Bearer " + token))
+		mockMvc.perform(get("/api/users/me").header("Authorization", "Bearer " + token))
 				.andExpect(jsonPath("$.emailVerified").value(true));
 	}
 
@@ -100,7 +100,7 @@ class VerificationFlowTest {
 	void codeCannotBeReused() throws Exception {
 		String code = mail.lastCode(EMAIL);
 		verify(EMAIL);
-		postJson("/auth/verify-email", "{\"email\":\"%s\",\"code\":\"%s\"}".formatted(EMAIL, code))
+		postJson("/api/auth/verify-email", "{\"email\":\"%s\",\"code\":\"%s\"}".formatted(EMAIL, code))
 				.andExpect(status().isBadRequest());
 	}
 
@@ -109,70 +109,70 @@ class VerificationFlowTest {
 		String good = mail.lastCode(EMAIL);
 		String bad = wrongCode(EMAIL);
 		for (int i = 0; i < 5; i++) {
-			postJson("/auth/verify-email", "{\"email\":\"%s\",\"code\":\"%s\"}".formatted(EMAIL, bad))
+			postJson("/api/auth/verify-email", "{\"email\":\"%s\",\"code\":\"%s\"}".formatted(EMAIL, bad))
 					.andExpect(status().isBadRequest());
 		}
-		postJson("/auth/verify-email", "{\"email\":\"%s\",\"code\":\"%s\"}".formatted(EMAIL, good))
+		postJson("/api/auth/verify-email", "{\"email\":\"%s\",\"code\":\"%s\"}".formatted(EMAIL, good))
 				.andExpect(status().isBadRequest());
 
 		// a fresh code works again
-		postJson("/auth/resend-verification", "{\"email\":\"%s\"}".formatted(EMAIL)).andExpect(status().isNoContent());
+		postJson("/api/auth/resend-verification", "{\"email\":\"%s\"}".formatted(EMAIL)).andExpect(status().isNoContent());
 		verify(EMAIL);
 	}
 
 	@Test
 	void resendAndForgotDoNotRevealWhetherEmailExists() throws Exception {
-		postJson("/auth/resend-verification", "{\"email\":\"nobody@b.com\"}").andExpect(status().isNoContent());
-		postJson("/auth/forgot-password", "{\"email\":\"nobody@b.com\"}").andExpect(status().isNoContent());
+		postJson("/api/auth/resend-verification", "{\"email\":\"nobody@b.com\"}").andExpect(status().isNoContent());
+		postJson("/api/auth/forgot-password", "{\"email\":\"nobody@b.com\"}").andExpect(status().isNoContent());
 		assertThat(mail.sentCount("nobody@b.com")).isZero();
 	}
 
 	@Test
 	void unverifiedUserCannotStartSensitiveChanges() throws Exception {
 		String token = login(EMAIL, PASSWORD);
-		postAs(token, "/users/me/password/request",
+		postAs(token, "/api/users/me/password/request",
 				"{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\"}").andExpect(status().isForbidden());
-		postAs(token, "/users/me/phone/request", "{\"newPhone\":\"+380991112233\"}").andExpect(status().isForbidden());
-		postAs(token, "/users/me/email/request",
+		postAs(token, "/api/users/me/phone/request", "{\"newPhone\":\"+380991112233\"}").andExpect(status().isForbidden());
+		postAs(token, "/api/users/me/email/request",
 				"{\"newEmail\":\"n@b.com\",\"currentPassword\":\"password123\"}").andExpect(status().isForbidden());
 	}
 
 	@Test
 	void changesPasswordWithCode() throws Exception {
 		String token = verifiedToken();
-		postAs(token, "/users/me/password/request",
+		postAs(token, "/api/users/me/password/request",
 				"{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\"}").andExpect(status().isNoContent());
 
 		// not applied before confirmation
 		login(EMAIL, PASSWORD);
 
-		postAs(token, "/users/me/password/confirm", "{\"code\":\"%s\"}".formatted(wrongCode(EMAIL)))
+		postAs(token, "/api/users/me/password/confirm", "{\"code\":\"%s\"}".formatted(wrongCode(EMAIL)))
 				.andExpect(status().isBadRequest());
-		postAs(token, "/users/me/password/confirm", "{\"code\":\"%s\"}".formatted(mail.lastCode(EMAIL)))
+		postAs(token, "/api/users/me/password/confirm", "{\"code\":\"%s\"}".formatted(mail.lastCode(EMAIL)))
 				.andExpect(status().isNoContent());
 
 		login(EMAIL, "newpassword456");
-		postJson("/auth/login", "{\"email\":\"%s\",\"password\":\"%s\"}".formatted(EMAIL, PASSWORD))
+		postJson("/api/auth/login", "{\"email\":\"%s\",\"password\":\"%s\"}".formatted(EMAIL, PASSWORD))
 				.andExpect(status().isUnauthorized());
 	}
 
 	@Test
 	void passwordChangeRequestChecksCurrentPasswordAndLength() throws Exception {
 		String token = verifiedToken();
-		postAs(token, "/users/me/password/request",
+		postAs(token, "/api/users/me/password/request",
 				"{\"currentPassword\":\"wrong-password\",\"newPassword\":\"newpassword456\"}").andExpect(status().isBadRequest());
-		postAs(token, "/users/me/password/request",
+		postAs(token, "/api/users/me/password/request",
 				"{\"currentPassword\":\"password123\",\"newPassword\":\"short\"}").andExpect(status().isBadRequest());
 	}
 
 	@Test
 	void changesPhoneWithCode() throws Exception {
 		String token = verifiedToken();
-		postAs(token, "/users/me/phone/request", "{\"newPhone\":\"+380991112233\"}").andExpect(status().isNoContent());
-		mockMvc.perform(get("/users/me").header("Authorization", "Bearer " + token))
+		postAs(token, "/api/users/me/phone/request", "{\"newPhone\":\"+380991112233\"}").andExpect(status().isNoContent());
+		mockMvc.perform(get("/api/users/me").header("Authorization", "Bearer " + token))
 				.andExpect(jsonPath("$.phone").value("+380671234567"));
 
-		postAs(token, "/users/me/phone/confirm", "{\"code\":\"%s\"}".formatted(mail.lastCode(EMAIL)))
+		postAs(token, "/api/users/me/phone/confirm", "{\"code\":\"%s\"}".formatted(mail.lastCode(EMAIL)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.phone").value("+380991112233"));
 	}
@@ -181,22 +181,22 @@ class VerificationFlowTest {
 	void rejectsPhoneUsedByAnotherUser() throws Exception {
 		register("Other", "+380991112233", "c@d.com");
 		String token = verifiedToken();
-		postAs(token, "/users/me/phone/request", "{\"newPhone\":\"+380991112233\"}").andExpect(status().isConflict());
+		postAs(token, "/api/users/me/phone/request", "{\"newPhone\":\"+380991112233\"}").andExpect(status().isConflict());
 	}
 
 	@Test
 	void changesEmailWithCodeSentToNewAddress() throws Exception {
 		String token = verifiedToken();
-		postAs(token, "/users/me/email/request",
+		postAs(token, "/api/users/me/email/request",
 				"{\"newEmail\":\"New@B.com\",\"currentPassword\":\"password123\"}").andExpect(status().isNoContent());
 		assertThat(mail.lastCode("new@b.com")).hasSize(6);
 
-		postAs(token, "/users/me/email/confirm", "{\"code\":\"%s\"}".formatted(mail.lastCode("new@b.com")))
+		postAs(token, "/api/users/me/email/confirm", "{\"code\":\"%s\"}".formatted(mail.lastCode("new@b.com")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.email").value("new@b.com"));
 
 		login("new@b.com", PASSWORD);
-		postJson("/auth/login", "{\"email\":\"%s\",\"password\":\"%s\"}".formatted(EMAIL, PASSWORD))
+		postJson("/api/auth/login", "{\"email\":\"%s\",\"password\":\"%s\"}".formatted(EMAIL, PASSWORD))
 				.andExpect(status().isUnauthorized());
 	}
 
@@ -204,22 +204,22 @@ class VerificationFlowTest {
 	void rejectsEmailChangeWithWrongPasswordOrTakenEmail() throws Exception {
 		register("Other", "+380991112233", "c@d.com");
 		String token = verifiedToken();
-		postAs(token, "/users/me/email/request",
+		postAs(token, "/api/users/me/email/request",
 				"{\"newEmail\":\"x@b.com\",\"currentPassword\":\"wrong-password\"}").andExpect(status().isBadRequest());
-		postAs(token, "/users/me/email/request",
+		postAs(token, "/api/users/me/email/request",
 				"{\"newEmail\":\"not-an-email\",\"currentPassword\":\"password123\"}").andExpect(status().isBadRequest());
-		postAs(token, "/users/me/email/request",
+		postAs(token, "/api/users/me/email/request",
 				"{\"newEmail\":\"C@d.com\",\"currentPassword\":\"password123\"}").andExpect(status().isConflict());
 	}
 
 	@Test
 	void resetsForgottenPasswordWithCode() throws Exception {
-		postJson("/auth/forgot-password", "{\"email\":\"%s\"}".formatted(EMAIL)).andExpect(status().isNoContent());
+		postJson("/api/auth/forgot-password", "{\"email\":\"%s\"}".formatted(EMAIL)).andExpect(status().isNoContent());
 		String code = mail.lastCode(EMAIL);
 
-		postJson("/auth/reset-password", "{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\"}"
+		postJson("/api/auth/reset-password", "{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\"}"
 				.formatted(EMAIL, wrongCode(EMAIL))).andExpect(status().isBadRequest());
-		postJson("/auth/reset-password", "{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\"}"
+		postJson("/api/auth/reset-password", "{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\"}"
 				.formatted(EMAIL, code)).andExpect(status().isNoContent());
 
 		login(EMAIL, "brandnew789");

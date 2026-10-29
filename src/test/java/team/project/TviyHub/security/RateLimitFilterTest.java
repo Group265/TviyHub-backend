@@ -22,10 +22,10 @@ class RateLimitFilterTest {
 	void returns429WithRetryAfterWhenLimitExceeded() throws Exception {
 		RateLimitFilter filter = new RateLimitFilter(2, 60);
 
-		assertThat(send(filter, "POST", "/auth/login").getStatus()).isEqualTo(200);
-		assertThat(send(filter, "POST", "/auth/register").getStatus()).isEqualTo(200);
+		assertThat(send(filter, "POST", "/api/auth/login").getStatus()).isEqualTo(200);
+		assertThat(send(filter, "POST", "/api/auth/register").getStatus()).isEqualTo(200);
 
-		MockHttpServletResponse blocked = send(filter, "POST", "/auth/login");
+		MockHttpServletResponse blocked = send(filter, "POST", "/api/auth/login");
 		assertThat(blocked.getStatus()).isEqualTo(429);
 		assertThat(blocked.getHeader("Retry-After")).isEqualTo("60");
 		assertThat(blocked.getContentAsString()).contains("Too many requests");
@@ -36,8 +36,8 @@ class RateLimitFilterTest {
 		RateLimitFilter filter = new RateLimitFilter(1, 60);
 
 		for (int i = 0; i < 5; i++) {
-			assertThat(send(filter, "GET", "/users/me").getStatus()).isEqualTo(200);
-			assertThat(send(filter, "GET", "/auth/login").getStatus()).isEqualTo(200);
+			assertThat(send(filter, "GET", "/api/users/me").getStatus()).isEqualTo(200);
+			assertThat(send(filter, "GET", "/api/auth/login").getStatus()).isEqualTo(200);
 		}
 	}
 }
