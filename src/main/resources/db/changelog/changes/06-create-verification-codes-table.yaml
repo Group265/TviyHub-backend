@@ -1,0 +1,65 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-verification-codes-table
+      author: tea
+      changes:
+        - createTable:
+            tableName: verification_codes
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_verification_codes_user
+                    referencedTableName: users
+                    referencedColumnNames: id
+                    deleteCascade: true
+
+              - column:
+                  name: purpose
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: code_hash
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: payload
+                  type: VARCHAR(255)
+
+              - column:
+                  name: attempts
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: expires_at
+                  type: DATETIME(6)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: created_at
+                  type: DATETIME(6)
+                  constraints:
+                    nullable: false
+
+        - addUniqueConstraint:
+            tableName: verification_codes
+            columnNames: user_id, purpose
+            constraintName: uk_verification_codes_user_purpose

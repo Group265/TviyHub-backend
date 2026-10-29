@@ -1,5 +1,6 @@
 package team.project.TviyHub.user;
 
+import team.project.TviyHub.auth.refresh.RefreshTokenService;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,6 +33,7 @@ public class AdminUserService {
 
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
+	private final RefreshTokenService refreshTokenService;
 
 	@Transactional(readOnly = true)
 	public PageResponse<AdminUserResponse> list(String search, Role role, Boolean blocked,
@@ -73,6 +75,7 @@ public class AdminUserService {
 		user.setEmail(email);
 		user.setPasswordHash(passwordEncoder.encode(request.password()));
 		user.setRole(request.role());
+		user.setEmailVerified(true);
 		return AdminUserResponse.from(userRepository.saveAndFlush(user));
 	}
 
@@ -85,6 +88,7 @@ public class AdminUserService {
 				throw new ConflictException("Email is already registered");
 			}
 			user.setEmail(email);
+			user.setEmailVerified(true);
 		}
 		if (request.phone() != null) {
 			String phone = request.phone().trim();
@@ -114,6 +118,9 @@ public class AdminUserService {
 		}
 		User user = find(id);
 		user.setBlocked(blocked);
+		if (blocked) {
+			refreshTokenService.revokeAllForUser(id);
+		}
 		return AdminUserResponse.from(userRepository.saveAndFlush(user));
 	}
 
@@ -122,6 +129,7 @@ public class AdminUserService {
 		User user = find(id);
 		user.setPasswordHash(passwordEncoder.encode(newPassword));
 		userRepository.saveAndFlush(user);
+		refreshTokenService.revokeAllForUser(id);
 	}
 
 	private Specification<User> filter(String search, Role role, Boolean blocked) {

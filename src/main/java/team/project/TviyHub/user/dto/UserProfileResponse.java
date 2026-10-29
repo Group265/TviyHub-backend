@@ -11,11 +11,12 @@ public record UserProfileResponse(
 		String phone,
 		String email,
 		Role role,
+		boolean emailVerified,
 		Instant createdAt
 ) {
 
 	public static UserProfileResponse from(User user) {
 		return new UserProfileResponse(user.getId(), user.getName(), user.getPhone(),
-				user.getEmail(), user.getRole(), user.getCreatedAt());
+				user.getEmail(), user.getRole(), user.isEmailVerified(), user.getCreatedAt());
 	}
 }

@@ -1,8 +1,10 @@
 package team.project.TviyHub.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.mail.MailException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -10,8 +12,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+	@ExceptionHandler(MailException.class)
+	public ProblemDetail handleMail(MailException ex) {
+		log.error("Failed to send email", ex);
+		return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, "Could not send the email, try again later");
+	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {

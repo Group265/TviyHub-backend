@@ -25,7 +25,9 @@ import java.util.Set;
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-	private static final Set<String> LIMITED_PATHS = Set.of("/auth/login", "/auth/register");
+	private static final Set<String> LIMITED_PATHS = Set.of(
+			"/api/auth/login", "/api/auth/register", "/api/auth/verify-email", "/api/auth/resend-verification",
+			"/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/refresh", "/api/auth/logout");
 
 	private final RateLimiter rateLimiter;
 	private final long windowSeconds;

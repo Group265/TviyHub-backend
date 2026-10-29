@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-email-verified-to-users
+      author: tea
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: email_verified
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
