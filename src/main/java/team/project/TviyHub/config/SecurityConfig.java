@@ -46,7 +46,7 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/verify-email",
 								"/api/auth/resend-verification", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/refresh", "/api/auth/logout").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/workspaces/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/workspaces/**", "/api/tariffs/**").permitAll()
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 						.requestMatchers("/api/admin/**").hasRole("ADMIN")
 						.anyRequest().authenticated())
