@@ -11,3 +11,5 @@ databaseChangeLog:
       file: db/changelog/changes/05-add-email-verified-to-users.yaml
   - include:
       file: db/changelog/changes/06-create-verification-codes-table.yaml
+  - include:
+      file: db/changelog/changes/07-create-refresh-tokens-table.yaml

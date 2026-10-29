@@ -41,7 +41,7 @@ public class SecurityConfig {
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login", "/auth/verify-email",
-								"/auth/resend-verification", "/auth/forgot-password", "/auth/reset-password").permitAll()
+								"/auth/resend-verification", "/auth/forgot-password", "/auth/reset-password", "/auth/refresh", "/auth/logout").permitAll()
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 						.requestMatchers("/admin/**").hasRole("ADMIN")
 						.anyRequest().authenticated())

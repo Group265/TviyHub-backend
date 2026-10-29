@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import team.project.TviyHub.auth.refresh.RefreshTokenService;
 import team.project.TviyHub.exception.BadRequestException;
 import team.project.TviyHub.exception.ConflictException;
 import team.project.TviyHub.exception.ForbiddenException;
@@ -29,6 +30,7 @@ public class UserService {
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final VerificationCodeService verificationCodeService;
+	private final RefreshTokenService refreshTokenService;
 
 	@Transactional(readOnly = true)
 	public UserProfileResponse getProfile(Long userId) {
@@ -57,6 +59,7 @@ public class UserService {
 		User user = findVerified(userId);
 		user.setPasswordHash(verificationCodeService.consume(userId, VerificationPurpose.PASSWORD_CHANGE, code));
 		userRepository.saveAndFlush(user);
+		refreshTokenService.revokeAllForUser(userId);
 	}
 
 	@Transactional

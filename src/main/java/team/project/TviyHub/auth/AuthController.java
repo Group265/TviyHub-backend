@@ -18,6 +18,7 @@ import team.project.TviyHub.auth.dto.LoginRequest;
 import team.project.TviyHub.auth.dto.ResetPasswordWithCodeRequest;
 import team.project.TviyHub.auth.dto.VerifyEmailRequest;
 import team.project.TviyHub.auth.dto.RegisterRequest;
+import team.project.TviyHub.auth.dto.RefreshTokenRequest;
 import team.project.TviyHub.user.dto.UserProfileResponse;
 
 @RestController
@@ -46,6 +47,24 @@ public class AuthController {
 	@ApiResponse(responseCode = "429", description = "Too many requests or login temporarily locked")
 	public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
 		return authService.login(request, httpRequest.getRemoteAddr());
+	}
+
+	@PostMapping("/refresh")
+	@Operation(summary = "Get a new access token", description = "Exchanges a refresh token for a new access token and a new refresh token. The old refresh token stops working; reusing it revokes the whole session.")
+	@ApiResponse(responseCode = "200", description = "Tokens issued")
+	@ApiResponse(responseCode = "401", description = "Invalid, expired or already used refresh token")
+	@ApiResponse(responseCode = "403", description = "Account is blocked")
+	@ApiResponse(responseCode = "429", description = "Too many requests")
+	public AuthResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
+		return authService.refresh(request.refreshToken());
+	}
+
+	@PostMapping("/logout")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@Operation(summary = "Log out", description = "Revokes the session of the given refresh token. Always returns 204, even for an unknown token.")
+	@ApiResponse(responseCode = "204", description = "Logged out")
+	public void logout(@Valid @RequestBody RefreshTokenRequest request) {
+		authService.logout(request.refreshToken());
 	}
 
 	@PostMapping("/verify-email")

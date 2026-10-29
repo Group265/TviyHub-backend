@@ -12,6 +12,8 @@ import team.project.TviyHub.exception.BadRequestException;
 import team.project.TviyHub.verification.VerificationCodeService;
 import team.project.TviyHub.verification.VerificationPurpose;
 import team.project.TviyHub.auth.dto.RegisterRequest;
+import team.project.TviyHub.auth.refresh.IssuedRefreshToken;
+import team.project.TviyHub.auth.refresh.RefreshTokenService;
 import team.project.TviyHub.exception.ConflictException;
 import team.project.TviyHub.exception.ForbiddenException;
 import team.project.TviyHub.exception.UnauthorizedException;
@@ -25,7 +27,7 @@ import team.project.TviyHub.user.dto.UserProfileResponse;
 import java.util.Locale;
 import java.util.Optional;
 
-@Service
+	@Service
 public class AuthService {
 
 	private final UserRepository userRepository;
@@ -33,12 +35,14 @@ public class AuthService {
 	private final JwtService jwtService;
 	private final LoginAttemptService loginAttemptService;
 	private final VerificationCodeService verificationCodeService;
+	private final RefreshTokenService refreshTokenService;
 	// Checked when the email is unknown, so that response time does not reveal whether it exists
 	private final String dummyPasswordHash;
 
 	public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
 					   JwtService jwtService, LoginAttemptService loginAttemptService,
-					   VerificationCodeService verificationCodeService) {
+					   VerificationCodeService verificationCodeService, RefreshTokenService refreshTokenService) {
+		this.refreshTokenService = refreshTokenService;
 		this.verificationCodeService = verificationCodeService;
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
@@ -107,13 +111,14 @@ public class AuthService {
 		verificationCodeService.consume(user.getId(), VerificationPurpose.PASSWORD_RESET, request.code());
 		user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
 		userRepository.saveAndFlush(user);
+		refreshTokenService.revokeAllForUser(user.getId());
 	}
 
 	private String normalize(String email) {
 		return email.trim().toLowerCase(Locale.ROOT);
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public AuthResponse login(LoginRequest request, String clientAddress) {
 		String email = request.email().trim().toLowerCase(Locale.ROOT);
 		String attemptKey = clientAddress + "|" + email;
@@ -131,6 +136,22 @@ public class AuthService {
 		if (user.get().isBlocked()) {
 			throw new ForbiddenException("Account is blocked");
 		}
-		return new AuthResponse(jwtService.generateToken(user.get()), "Bearer", jwtService.getLifetimeSeconds());
+		return tokens(user.get(), refreshTokenService.issue(user.get().getId()));
+	}
+
+	/** Exchanges a refresh token for a new access token and a new refresh token. */
+	@Transactional(noRollbackFor = UnauthorizedException.class)
+	public AuthResponse refresh(String refreshToken) {
+		IssuedRefreshToken issued = refreshTokenService.rotate(refreshToken);
+		return tokens(issued.user(), issued.token());
+	}
+
+	public void logout(String refreshToken) {
+		refreshTokenService.revoke(refreshToken);
+	}
+
+	private AuthResponse tokens(User user, String refreshToken) {
+		return new AuthResponse(jwtService.generateToken(user), "Bearer", jwtService.getLifetimeSeconds(),
+				refreshToken, refreshTokenService.getLifetimeSeconds());
 	}
 }
