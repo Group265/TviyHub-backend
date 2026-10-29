@@ -67,60 +67,7 @@ databaseChangeLog:
                     nullable: false
 
   - changeSet:
-      id: 2-3-create-subscriptions-table
-      author: acidden
-      changes:
-        - createTable:
-            tableName: subscriptions
-            columns:
-              - column:
-                  name: id
-                  type: BIGINT
-                  autoIncrement: true
-                  constraints:
-                    primaryKey: true
-                    nullable: false
-              - column:
-                  name: user_id
-                  type: BIGINT
-                  constraints:
-                    nullable: false
-              - column:
-                  name: workspace_id
-                  type: BIGINT
-                  constraints:
-                    nullable: false
-                    foreignKeyName: fk_sub_workspace
-                    referencedTableName: resources
-                    referencedColumnNames: id
-              - column:
-                  name: start_date
-                  type: DATE
-                  constraints:
-                    nullable: false
-              - column:
-                  name: end_date
-                  type: DATE
-                  constraints:
-                    nullable: false
-              - column:
-                  name: status
-                  type: VARCHAR(20)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: payment_status
-                  type: VARCHAR(20)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: created_at
-                  type: TIMESTAMP
-                  constraints:
-                    nullable: false
-
-  - changeSet:
-      id: 2-4-create-bookings-table
+      id: 2-3-create-bookings-table
       author: acidden
       changes:
         - createTable:
@@ -138,6 +85,9 @@ databaseChangeLog:
                   type: BIGINT
                   constraints:
                     nullable: false
+                    foreignKeyName: fk_booking_user
+                    referencedTableName: users
+                    referencedColumnNames: id
               - column:
                   name: resource_id
                   type: BIGINT
@@ -163,6 +113,11 @@ databaseChangeLog:
                   name: end_time
                   type: TIME
               - column:
+                  name: total_price
+                  type: DECIMAL(10,2)
+                  constraints:
+                    nullable: false
+              - column:
                   name: status
                   type: VARCHAR(20)
                   constraints:
@@ -174,7 +129,7 @@ databaseChangeLog:
                     nullable: false
 
   - changeSet:
-      id: 2-5-create-closed-days-table
+      id: 2-4-create-closed-days-table
       author: acidden
       changes:
         - createTable:
@@ -193,66 +148,118 @@ databaseChangeLog:
                     nullable: false
 
   - changeSet:
-      id: 2-6-seed-initial-data
+      id: 2-5-seed-initial-data
       author: acidden
       changes:
         - insert:
             tableName: resources
             columns:
-              - column: { name: name, value: "Робоче місце №1" }
-              - column: { name: type, value: "DESK" }
+              - column:
+                  name: name
+                  value: "Робоче місце №1"
+              - column:
+                  name: type
+                  value: "DESK"
         - insert:
             tableName: resources
             columns:
-              - column: { name: name, value: "Робоче місце №2" }
-              - column: { name: type, value: "DESK" }
+              - column:
+                  name: name
+                  value: "Робоче місце №2"
+              - column:
+                  name: type
+                  value: "DESK"
         - insert:
             tableName: resources
             columns:
-              - column: { name: name, value: "Робоче місце №3" }
-              - column: { name: type, value: "DESK" }
+              - column:
+                  name: name
+                  value: "Робоче місце №3"
+              - column:
+                  name: type
+                  value: "DESK"
         - insert:
             tableName: resources
             columns:
-              - column: { name: name, value: "Робоче місце №4" }
-              - column: { name: type, value: "DESK" }
+              - column:
+                  name: name
+                  value: "Робоче місце №4"
+              - column:
+                  name: type
+                  value: "DESK"
         - insert:
             tableName: resources
             columns:
-              - column: { name: name, value: "Робоче місце №5" }
-              - column: { name: type, value: "DESK" }
+              - column:
+                  name: name
+                  value: "Робоче місце №5"
+              - column:
+                  name: type
+                  value: "DESK"
         - insert:
             tableName: resources
             columns:
-              - column: { name: name, value: "Робоче місце №6" }
-              - column: { name: type, value: "DESK" }
+              - column:
+                  name: name
+                  value: "Робоче місце №6"
+              - column:
+                  name: type
+                  value: "DESK"
         - insert:
             tableName: resources
             columns:
-              - column: { name: name, value: "Переговорна кімната" }
-              - column: { name: type, value: "MEETING_ROOM" }
+              - column:
+                  name: name
+                  value: "Переговорна кімната"
+              - column:
+                  name: type
+                  value: "MEETING_ROOM"
 
         - insert:
             tableName: tariffs
             columns:
-              - column: { name: resource_type, value: "DESK" }
-              - column: { name: booking_type, value: "HOURLY" }
-              - column: { name: price, value: 150.00 }
+              - column:
+                  name: resource_type
+                  value: "DESK"
+              - column:
+                  name: booking_type
+                  value: "HOURLY"
+              - column:
+                  name: price
+                  value: 150.00
         - insert:
             tableName: tariffs
             columns:
-              - column: { name: resource_type, value: "DESK" }
-              - column: { name: booking_type, value: "DAILY" }
-              - column: { name: price, value: 500.00 }
+              - column:
+                  name: resource_type
+                  value: "DESK"
+              - column:
+                  name: booking_type
+                  value: "DAILY"
+              - column:
+                  name: price
+                  value: 500.00
         - insert:
             tableName: tariffs
             columns:
-              - column: { name: resource_type, value: "DESK" }
-              - column: { name: booking_type, value: "SUBSCRIPTION" }
-              - column: { name: price, value: 3500.00 }
+              - column:
+                  name: resource_type
+                  value: "DESK"
+              - column:
+                  name: booking_type
+                  value: "SUBSCRIPTION"
+              - column:
+                  name: price
+                  value: 3500.00
         - insert:
             tableName: tariffs
             columns:
-              - column: { name: resource_type, value: "MEETING_ROOM" }
-              - column: { name: booking_type, value: "HOURLY" }
-              - column: { name: price, value: 200.00 }
+              - column:
+                  name: resource_type
+                  value: "MEETING_ROOM"
+              - column:
+                  name: booking_type
+                  value: "HOURLY"
+              - column:
+                  name: price
+                  value: 200.00

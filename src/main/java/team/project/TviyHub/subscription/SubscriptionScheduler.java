@@ -6,6 +6,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 @Component
@@ -20,7 +22,8 @@ public class SubscriptionScheduler {
     public void cancelUnpaidSubscriptions() {
         log.info("Starting background process to clean up unpaid subscriptions...");
 
-        LocalDateTime thresholdTime = LocalDateTime.now().minusHours(24);
+        ZonedDateTime kyivTime = ZonedDateTime.now(ZoneId.of("Europe/Kyiv")).minusHours(24);
+        LocalDateTime thresholdTime = kyivTime.toLocalDateTime();
 
         List<Subscription> expiredSubscriptions = subscriptionRepository
                 .findByStatusAndCreatedAtBefore(Subscription.SubscriptionStatus.PENDING_PAYMENT, thresholdTime);
