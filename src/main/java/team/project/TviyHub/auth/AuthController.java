@@ -13,7 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import team.project.TviyHub.auth.dto.AuthResponse;
+import team.project.TviyHub.auth.dto.EmailRequest;
 import team.project.TviyHub.auth.dto.LoginRequest;
+import team.project.TviyHub.auth.dto.ResetPasswordWithCodeRequest;
+import team.project.TviyHub.auth.dto.VerifyEmailRequest;
 import team.project.TviyHub.auth.dto.RegisterRequest;
 import team.project.TviyHub.user.dto.UserProfileResponse;
 
@@ -43,5 +46,41 @@ public class AuthController {
 	@ApiResponse(responseCode = "429", description = "Too many requests or login temporarily locked")
 	public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
 		return authService.login(request, httpRequest.getRemoteAddr());
+	}
+
+	@PostMapping("/verify-email")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@Operation(summary = "Confirm the email with the code sent at registration")
+	@ApiResponse(responseCode = "204", description = "Email verified")
+	@ApiResponse(responseCode = "400", description = "Invalid or expired code")
+	public void verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+		authService.verifyEmail(request);
+	}
+
+	@PostMapping("/resend-verification")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@Operation(summary = "Send a new verification code", description = "Always returns 204, whether or not the email is registered.")
+	@ApiResponse(responseCode = "204", description = "Accepted")
+	@ApiResponse(responseCode = "429", description = "Code was requested too recently")
+	public void resendVerification(@Valid @RequestBody EmailRequest request) {
+		authService.resendVerification(request);
+	}
+
+	@PostMapping("/forgot-password")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@Operation(summary = "Send a password reset code", description = "Always returns 204, whether or not the email is registered.")
+	@ApiResponse(responseCode = "204", description = "Accepted")
+	@ApiResponse(responseCode = "429", description = "Code was requested too recently")
+	public void forgotPassword(@Valid @RequestBody EmailRequest request) {
+		authService.forgotPassword(request);
+	}
+
+	@PostMapping("/reset-password")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@Operation(summary = "Set a new password using the emailed code")
+	@ApiResponse(responseCode = "204", description = "Password changed")
+	@ApiResponse(responseCode = "400", description = "Invalid or expired code, or validation failed")
+	public void resetPassword(@Valid @RequestBody ResetPasswordWithCodeRequest request) {
+		authService.resetPassword(request);
 	}
 }

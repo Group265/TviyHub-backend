@@ -125,10 +125,9 @@ class LoginAndProfileTest {
 
 	@Test
 	void updatesProfile() throws Exception {
-		patchMe("{\"name\":\"New Name\",\"phone\":\"+380991112233\"}")
+		patchMe("{\"name\":\"New Name\"}")
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.name").value("New Name"))
-				.andExpect(jsonPath("$.phone").value("+380991112233"));
+				.andExpect(jsonPath("$.name").value("New Name"));
 	}
 
 	@Test
@@ -140,17 +139,15 @@ class LoginAndProfileTest {
 	}
 
 	@Test
-	void rejectsBlankNameAndInvalidPhone() throws Exception {
+	void rejectsBlankName() throws Exception {
 		patchMe("{\"name\":\"   \"}").andExpect(status().isBadRequest());
-		patchMe("{\"phone\":\"0671234567\"}").andExpect(status().isBadRequest());
 	}
 
 	@Test
-	void rejectsPhoneUsedByAnotherUser() throws Exception {
-		mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-				{"name":"Other","phone":"+380991112233","email":"c@d.com","password":"password123"}
-				""")).andExpect(status().isCreated());
-		patchMe("{\"phone\":\"+380991112233\"}").andExpect(status().isConflict());
+	void patchCannotChangePhone() throws Exception {
+		patchMe("{\"name\":\"Same\",\"phone\":\"+380991112233\"}")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.phone").value("+380671234567"));
 	}
 
 	@Test
@@ -170,55 +167,6 @@ class LoginAndProfileTest {
 				.andExpect(jsonPath("$.role").value("USER"));
 	}
 
-	private ResultActions patchAsUser(String path, String json) throws Exception {
-		return mockMvc.perform(patch(path)
-				.header("Authorization", "Bearer " + login("a@b.com", "password123"))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(json));
-	}
-
-	@Test
-	void changesEmailAndLogsInWithNewOne() throws Exception {
-		patchAsUser("/users/me/email", "{\"newEmail\":\"New@B.com\",\"currentPassword\":\"password123\"}")
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.email").value("new@b.com"));
-		login("new@b.com", "password123");
-		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
-						.content("{\"email\":\"a@b.com\",\"password\":\"password123\"}"))
-				.andExpect(status().isUnauthorized());
-	}
-
-	@Test
-	void rejectsEmailChangeWithWrongPasswordInvalidOrTakenEmail() throws Exception {
-		patchAsUser("/users/me/email", "{\"newEmail\":\"x@b.com\",\"currentPassword\":\"wrong-password\"}")
-				.andExpect(status().isBadRequest());
-		patchAsUser("/users/me/email", "{\"newEmail\":\"not-an-email\",\"currentPassword\":\"password123\"}")
-				.andExpect(status().isBadRequest());
-		mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-				{"name":"Other","phone":"+380991112233","email":"c@d.com","password":"password123"}
-				""")).andExpect(status().isCreated());
-		patchAsUser("/users/me/email", "{\"newEmail\":\"C@d.com\",\"currentPassword\":\"password123\"}")
-				.andExpect(status().isConflict());
-	}
-
-	@Test
-	void changesPassword() throws Exception {
-		patchAsUser("/users/me/password", "{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\"}")
-				.andExpect(status().isNoContent());
-		login("a@b.com", "newpassword456");
-		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
-						.content("{\"email\":\"a@b.com\",\"password\":\"password123\"}"))
-				.andExpect(status().isUnauthorized());
-	}
-
-	@Test
-	void rejectsPasswordChangeWithWrongCurrentOrShortNew() throws Exception {
-		patchAsUser("/users/me/password", "{\"currentPassword\":\"wrong-password\",\"newPassword\":\"newpassword456\"}")
-				.andExpect(status().isBadRequest());
-		patchAsUser("/users/me/password", "{\"currentPassword\":\"password123\",\"newPassword\":\"short\"}")
-				.andExpect(status().isBadRequest());
-	}
-
 	@Test
 	void adminPassesAdminAreaRule() throws Exception {
 		User admin = new User();
@@ -227,6 +175,7 @@ class LoginAndProfileTest {
 		admin.setEmail("admin@b.com");
 		admin.setPasswordHash(passwordEncoder.encode("password123"));
 		admin.setRole(Role.ADMIN);
+		admin.setEmailVerified(true);
 		userRepository.saveAndFlush(admin);
 
 		// authorized, but no such handler exists yet, so 404 rather than 401/403

@@ -28,7 +28,7 @@ class OpenApiTest {
 				.andExpect(jsonPath("$.paths['/auth/login']").exists())
 				.andExpect(jsonPath("$.paths['/auth/register']").exists())
 				.andExpect(jsonPath("$.paths['/users/me']").exists())
-				.andExpect(jsonPath("$.paths['/users/me/password']").exists())
+				.andExpect(jsonPath("$.paths['/users/me/password/request']").exists())
 				.andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"));
 	}
 

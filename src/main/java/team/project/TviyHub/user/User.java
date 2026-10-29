@@ -54,6 +54,9 @@ public class User implements UserDetails {
 	@Column(name = "is_blocked", nullable = false)
 	private boolean blocked;
 
+	@Column(name = "email_verified", nullable = false)
+	private boolean emailVerified;
+
 	@Override
 	public boolean isEnabled() {
 		return !blocked;

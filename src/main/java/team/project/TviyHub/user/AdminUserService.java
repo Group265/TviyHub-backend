@@ -73,6 +73,7 @@ public class AdminUserService {
 		user.setEmail(email);
 		user.setPasswordHash(passwordEncoder.encode(request.password()));
 		user.setRole(request.role());
+		user.setEmailVerified(true);
 		return AdminUserResponse.from(userRepository.saveAndFlush(user));
 	}
 
@@ -85,6 +86,7 @@ public class AdminUserService {
 				throw new ConflictException("Email is already registered");
 			}
 			user.setEmail(email);
+			user.setEmailVerified(true);
 		}
 		if (request.phone() != null) {
 			String phone = request.phone().trim();
