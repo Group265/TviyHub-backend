@@ -4,7 +4,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import team.project.TviyHub.auth.dto.AuthResponse;
+import team.project.TviyHub.auth.dto.EmailRequest;
 import team.project.TviyHub.auth.dto.LoginRequest;
+import team.project.TviyHub.auth.dto.ResetPasswordWithCodeRequest;
+import team.project.TviyHub.auth.dto.VerifyEmailRequest;
+import team.project.TviyHub.exception.BadRequestException;
+import team.project.TviyHub.verification.VerificationCodeService;
+import team.project.TviyHub.verification.VerificationPurpose;
 import team.project.TviyHub.auth.dto.RegisterRequest;
 import team.project.TviyHub.exception.ConflictException;
 import team.project.TviyHub.exception.ForbiddenException;
@@ -26,11 +32,14 @@ public class AuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final JwtService jwtService;
 	private final LoginAttemptService loginAttemptService;
+	private final VerificationCodeService verificationCodeService;
 	// Checked when the email is unknown, so that response time does not reveal whether it exists
 	private final String dummyPasswordHash;
 
 	public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-					   JwtService jwtService, LoginAttemptService loginAttemptService) {
+					   JwtService jwtService, LoginAttemptService loginAttemptService,
+					   VerificationCodeService verificationCodeService) {
+		this.verificationCodeService = verificationCodeService;
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
@@ -56,8 +65,52 @@ public class AuthService {
 		user.setEmail(email);
 		user.setPasswordHash(passwordEncoder.encode(request.password()));
 		user.setRole(Role.USER);
+		user.setEmailVerified(false);
 
-		return UserProfileResponse.from(userRepository.saveAndFlush(user));
+		User saved = userRepository.saveAndFlush(user);
+		verificationCodeService.issue(saved.getId(), VerificationPurpose.EMAIL_VERIFICATION, null, saved.getEmail());
+		return UserProfileResponse.from(saved);
+	}
+
+	@Transactional
+	public void verifyEmail(VerifyEmailRequest request) {
+		User user = userRepository.findByEmail(normalize(request.email()))
+				.orElseThrow(() -> new BadRequestException("Invalid or expired code"));
+		verificationCodeService.consume(user.getId(), VerificationPurpose.EMAIL_VERIFICATION, request.code());
+		user.setEmailVerified(true);
+		userRepository.saveAndFlush(user);
+	}
+
+	/** Always completes silently, so the response does not reveal whether the email is registered. */
+	@Transactional
+	public void resendVerification(EmailRequest request) {
+		Optional<User> user = userRepository.findByEmail(normalize(request.email()));
+		if (user.isPresent() && !user.get().isEmailVerified() && !user.get().isBlocked()) {
+			verificationCodeService.issue(user.get().getId(), VerificationPurpose.EMAIL_VERIFICATION, null, user.get().getEmail());
+		}
+	}
+
+	/** Always completes silently, so the response does not reveal whether the email is registered. */
+	@Transactional
+	public void forgotPassword(EmailRequest request) {
+		Optional<User> user = userRepository.findByEmail(normalize(request.email()));
+		if (user.isPresent() && !user.get().isBlocked()) {
+			verificationCodeService.issue(user.get().getId(), VerificationPurpose.PASSWORD_RESET, null, user.get().getEmail());
+		}
+	}
+
+	@Transactional
+	public void resetPassword(ResetPasswordWithCodeRequest request) {
+		User user = userRepository.findByEmail(normalize(request.email()))
+				.filter(u -> !u.isBlocked())
+				.orElseThrow(() -> new BadRequestException("Invalid or expired code"));
+		verificationCodeService.consume(user.getId(), VerificationPurpose.PASSWORD_RESET, request.code());
+		user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+		userRepository.saveAndFlush(user);
+	}
+
+	private String normalize(String email) {
+		return email.trim().toLowerCase(Locale.ROOT);
 	}
 
 	@Transactional(readOnly = true)
