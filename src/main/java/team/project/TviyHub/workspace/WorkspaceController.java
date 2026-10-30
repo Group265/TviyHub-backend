@@ -4,6 +4,7 @@ import java.util.List;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -49,7 +50,7 @@ public class WorkspaceController {
             summary = "Create a new workspace",
             description = "Add a new workspace (DESK or MEETING_ROOM) to the hub. Restricted to administrators."
     )
-    public ResponseEntity<WorkspaceResponse> create(@RequestBody WorkspaceRequest request) {
+    public ResponseEntity<WorkspaceResponse> create(@Valid @RequestBody WorkspaceRequest request) {
         Workspace w = workspaceService.createWorkspace(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(workspaceMapper.toDto(w));
@@ -61,7 +62,10 @@ public class WorkspaceController {
             summary = "Update an existing workspace",
             description = "Modify the name or resource type of an existing workspace by its ID. Restricted to administrators."
     )
-    public ResponseEntity<WorkspaceResponse> update(@PathVariable Long id, @RequestBody WorkspaceRequest request) {
+    public ResponseEntity<WorkspaceResponse> update(
+            @PathVariable Long id,
+            @Valid @RequestBody WorkspaceRequest request
+    ) {
         Workspace w = workspaceService.updateWorkspace(id, request);
         return ResponseEntity.ok(workspaceMapper.toDto(w));
     }
