@@ -9,11 +9,13 @@ import org.springframework.data.repository.query.Param;
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("SELECT b FROM Booking b WHERE b.workspace.id = :workspaceId " +
-            "AND b.bookingDate = :date AND b.status = 'COFIRMED'")
+            "AND b.bookingDate = :date AND b.status = 'CONFIRMED'")
     List<Booking> findActiveBookingsByWorkspaceAndDate(
             @Param("workspaceId") Long workspaceId,
             @Param("date")LocalDate date
     );
 
     List<Booking> findByBookingDateAndStatus(LocalDate bookingDate, Booking.BookingStatus status);
+
+    List<Booking> findByUserId(Long userId);
 }
