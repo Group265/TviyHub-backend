@@ -23,8 +23,10 @@ import team.project.TviyHub.workspace.WorkspaceRepository;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 @Service
@@ -273,22 +275,22 @@ public class BookingService {
             }
 
             ZoneId kyivZone = ZoneId.of("Europe/Kyiv");
-            LocalDate today = LocalDate.now(kyivZone);
+            LocalDateTime nowInKyiv = LocalDateTime.now(kyivZone);
+            LocalDate today = nowInKyiv.toLocalDate();
 
             if (booking.getBookingType() == Tariff.BookingType.DAILY) {
                 if (!today.isBefore(booking.getBookingDate())) {
                     throw new BadRequestException("Daily bookings can only be cancelled at least 1 day in advance");
                 }
             } else if (booking.getBookingType() == Tariff.BookingType.HOURLY) {
-                if (!today.equals(booking.getBookingDate())) {
-                    if (today.isAfter(booking.getBookingDate())) {
-                        throw new BadRequestException("Cannot cancel a past booking");
-                    }
-                } else if (today.equals(booking.getBookingDate())) {
-                    LocalTime now = LocalTime.now(kyivZone);
-                    if (now.plusHours(2).isAfter(booking.getStartTime())) {
-                        throw new BadRequestException("Hourly bookings can only be cancelled at least 2 hours before the start time");
-                    }
+                LocalDateTime bookingStart = LocalDateTime.of(booking.getBookingDate(), booking.getStartTime());
+
+                if (nowInKyiv.isAfter(bookingStart)) {
+                    throw new BadRequestException("Cannot cancel a past booking");
+                }
+
+                if (nowInKyiv.plusHours(2).isAfter(bookingStart)) {
+                    throw new BadRequestException("Hourly bookings can only be cancelled at least 2 hours before the start time");
                 }
             }
         }
@@ -296,7 +298,7 @@ public class BookingService {
         booking.setStatus(Booking.BookingStatus.CANCELLED);
 
         if ("PAID".equals(booking.getPaymentStatus())) {
-            booking.setPaymentStatus("REFUND_PENDING");
+            booking.setPaymentStatus("PAID");
         }
 
         Booking saved = bookingRepository.save(booking);
