@@ -1,12 +1,14 @@
 package team.project.TviyHub.closedday;
 
-import java.time.LocalDate;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import team.project.TviyHub.closedday.dto.ClosedDayRequest;
-import team.project.TviyHub.exception.BusinessException;
+import team.project.TviyHub.exception.ConflictException;
+import team.project.TviyHub.exception.ResourceNotFoundException;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +25,7 @@ public class ClosedDayService {
     @Transactional(readOnly = true)
     public ClosedDay getClosedDayByDate(LocalDate date) {
         return closedDayRepository.findById(date)
-                .orElseThrow(() -> new BusinessException("Day " + date + " is not marked as closed"));
+                .orElseThrow(() -> new ResourceNotFoundException("Day " + date + " is not marked as closed"));
     }
 
     @Transactional(readOnly = true)
@@ -34,7 +36,7 @@ public class ClosedDayService {
     @Transactional
     public ClosedDay createClosedDay(ClosedDayRequest request) {
         if (closedDayRepository.existsById(request.date())) {
-            throw new BusinessException("Date " + request.date() + " is already marked as closed");
+            throw new ConflictException("Date " + request.date() + " is already marked as closed");
         }
         ClosedDay closedDay = closedDayMapper.toEntity(request);
         return closedDayRepository.save(closedDay);

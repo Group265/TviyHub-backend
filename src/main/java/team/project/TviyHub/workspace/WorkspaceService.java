@@ -4,7 +4,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import team.project.TviyHub.exception.BusinessException;
+import team.project.TviyHub.exception.ResourceNotFoundException;
 import team.project.TviyHub.workspace.dto.WorkspaceRequest;
 
 @Service
@@ -23,7 +23,7 @@ public class WorkspaceService {
     public Workspace getWorkspaceById(Long id) {
         return workspaceRepository.findById(id)
                 .filter(w -> !w.isDeleted())
-                .orElseThrow(() -> new BusinessException("Workspace not found or deleted"));
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found or deleted"));
     }
 
     @Transactional

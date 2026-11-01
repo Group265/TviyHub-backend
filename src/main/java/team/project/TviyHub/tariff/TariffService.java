@@ -3,7 +3,8 @@ package team.project.TviyHub.tariff;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import team.project.TviyHub.exception.BusinessException;
+import team.project.TviyHub.exception.ConflictException;
+import team.project.TviyHub.exception.ResourceNotFoundException;
 import team.project.TviyHub.tariff.dto.TariffRequest;
 
 import java.util.List;
@@ -23,14 +24,14 @@ public class TariffService {
     @Transactional(readOnly = true)
     public Tariff getTariffById(Long id) {
         return tariffRepository.findById(id)
-                .orElseThrow(() -> new BusinessException("Tariff with id: " + id + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Tariff with id: " + id + " not found"));
     }
 
     @Transactional
     public Tariff createTariff(TariffRequest request) {
         tariffRepository.findByWorkspaceTypeAndBookingType(request.workspaceType(), request.bookingType())
                 .ifPresent(t -> {
-                    throw new BusinessException("Tariff for this workspace and booking type already exists");
+                    throw new ConflictException("Tariff for this workspace and booking type already exists");
                 });
         Tariff tariff = tariffMapper.toEntity(request);
         return tariffRepository.save(tariff);
@@ -43,7 +44,7 @@ public class TariffService {
         tariffRepository.findByWorkspaceTypeAndBookingType(request.workspaceType(), request.bookingType())
                 .filter(t -> !t.getId().equals(id))
                 .ifPresent(t -> {
-                    throw new BusinessException("Another tariff for this workspace and booking type already exists");
+                    throw new ConflictException("Another tariff for this workspace and booking type already exists");
                 });
 
         tariffMapper.updateEntityFromDto(request, tariff);
