@@ -8,14 +8,19 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import team.project.TviyHub.booking.dto.BookingRequestDto;
 import team.project.TviyHub.booking.dto.BookingResponseDto;
+import team.project.TviyHub.booking.dto.WorkspaceAvailabilityDto;
 import team.project.TviyHub.user.User;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @RestController
@@ -39,6 +44,25 @@ public class BookingController {
         return ResponseEntity.ok(responses);
     }
 
+    @GetMapping("/availability")
+    @Operation(
+            summary = "Get workspace availability map",
+            description = "Returns a full list of workspaces with availability flags for a specific date and optional time range to render the visual layout map."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Availability map fetched successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid parameters provided")
+    })
+    public ResponseEntity<List<WorkspaceAvailabilityDto>> getAvailabilityMap(
+            @RequestParam @DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime startTime,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime endTime
+    ) {
+        List<WorkspaceAvailabilityDto> availability = bookingService.checkWorkspaceAvailability(date, startTime, endTime);
+        return ResponseEntity.ok(availability);
+    }
+
+
     @PostMapping
     @Operation(
             summary = "Create a new booking",
@@ -61,6 +85,24 @@ public class BookingController {
     ) {
         BookingResponseDto response = bookingService.createBooking(requestDto, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/calculate-price")
+    @Operation(
+            summary = "Calculate booking price",
+            description = "Returns the total price for the proposed slot based on active tariffs without creating a booking."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Price calculated successfully",
+                    content = @Content(schema = @Schema(implementation = BigDecimal.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid time slot, missing arguments, or wrong booking restrictions",
+                    content = @Content),
+            @ApiResponse(responseCode = "404", description = "Workspace or appropriate tariff not found",
+                    content = @Content)
+    })
+    public ResponseEntity<BigDecimal> calculatePrice(@Valid @RequestBody BookingRequestDto requestDto) {
+        BigDecimal estimatedPrice = bookingService.calculateEstimatedPrice(requestDto);
+        return ResponseEntity.ok(estimatedPrice);
     }
 
     @PatchMapping("/{id}/cancel")

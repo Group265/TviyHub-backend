@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import team.project.TviyHub.booking.dto.BookingRequestDto;
 import team.project.TviyHub.booking.dto.BookingResponseDto;
+import team.project.TviyHub.booking.dto.WorkspaceAvailabilityDto;
 import team.project.TviyHub.closedday.ClosedDayService;
 import team.project.TviyHub.exception.BadRequestException;
 import team.project.TviyHub.exception.ConflictException;
@@ -63,7 +64,6 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace with ID " + requestDto.workspaceId() + " not found"));
 
         LocalDate bookingDate = requestDto.bookingDate();
-
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
 
         if (closedDayService.isDateClosed(bookingDate)) {
@@ -78,8 +78,8 @@ public class BookingService {
         }
 
         boolean isDaily = requestDto.bookingType() == Tariff.BookingType.DAILY;
-        long hours = 0;
 
+        // Создаем единый финальный DTO сразу, чтобы в базу гарантированно уходили правильные часы
         BookingRequestDto finalRequestDto;
 
         if (!isDaily) {
@@ -100,7 +100,7 @@ public class BookingService {
                 }
             }
 
-            hours = Duration.between(start, end).toHours();
+            long hours = Duration.between(start, end).toHours();
             if (hours < 1 || hours > 4) {
                 throw new BadRequestException("Hourly booking must be between 1 and 4 hours");
             }
@@ -143,12 +143,7 @@ public class BookingService {
             }
         }
 
-        Tariff tariff = tariffRepository.findByWorkspaceTypeAndBookingType(workspace.getType(), finalRequestDto.bookingType())
-                .orElseThrow(() -> new ResourceNotFoundException("Tariff not found for this resource and booking type"));
-
-        BigDecimal totalPrice = isDaily
-                ? tariff.getPrice()
-                : tariff.getPrice().multiply(BigDecimal.valueOf(hours));
+        BigDecimal totalPrice = calculateEstimatedPrice(finalRequestDto);
 
         Booking booking = bookingMapper.toEntity(finalRequestDto, currentUser, workspace);
         booking.setTotalPrice(totalPrice);
@@ -157,6 +152,102 @@ public class BookingService {
         return bookingMapper.toDto(savedBooking);
     }
 
+    @Transactional(readOnly = true) // <-- ОБЯЗАТЕЛЬНО ПРОВЕРЬТЕ НАЛИЧИЕ ЭТОЙ СТРОКИ
+    public List<WorkspaceAvailabilityDto> checkWorkspaceAvailability(LocalDate date, LocalTime startTime, LocalTime endTime) {
+        if (closedDayService.isDateClosed(date)) {
+            return workspaceRepository.findAll().stream()
+                    .map(w -> new WorkspaceAvailabilityDto(w.getId(), w.getName(), w.getType(), false))
+                    .toList();
+        }
+
+        LocalTime effectiveStart = (startTime != null) ? startTime : LocalTime.of(9, 0);
+        LocalTime effectiveEnd = (endTime != null) ? endTime : LocalTime.of(19, 0);
+
+        if (!effectiveEnd.isAfter(effectiveStart)) {
+            throw new BadRequestException("Invalid time slot: end time must be after start time");
+        }
+        if (effectiveStart.isBefore(LocalTime.of(9, 0)) || effectiveEnd.isAfter(LocalTime.of(19, 0))) {
+            return workspaceRepository.findAll().stream()
+                    .map(w -> new WorkspaceAvailabilityDto(w.getId(), w.getName(), w.getType(), false))
+                    .toList();
+        }
+
+        List<Workspace> allWorkspaces = workspaceRepository.findAll();
+        List<Booking> activeBookings = bookingRepository.findByBookingDateAndStatus(date, Booking.BookingStatus.CONFIRMED);
+
+        return allWorkspaces.stream().map(workspace -> {
+            boolean isAvailable = true;
+
+            if (workspace.getType() == Workspace.WorkspaceType.DESK) {
+                List<Subscription> activeSubs = subscriptionRepository.findOverlappingSubscriptionsForRead(workspace.getId(), date);
+                if (!activeSubs.isEmpty()) {
+                    isAvailable = false;
+                }
+            }
+
+            if (isAvailable) {
+                for (Booking booking : activeBookings) {
+                    // Безопасная проверка на null, чтобы избежать NullPointerException
+                    if (booking.getWorkspace() != null && booking.getWorkspace().getId().equals(workspace.getId())) {
+                        if (booking.getBookingType() == Tariff.BookingType.DAILY) {
+                            isAvailable = false;
+                            break;
+                        }
+
+                        LocalTime existingStart = booking.getStartTime() != null ? booking.getStartTime() : LocalTime.of(9, 0);
+                        LocalTime existingEnd = booking.getEndTime() != null ? booking.getEndTime() : LocalTime.of(19, 0);
+
+                        if (effectiveStart.isBefore(existingEnd) && effectiveEnd.isAfter(existingStart)) {
+                            isAvailable = false;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return new WorkspaceAvailabilityDto(
+                    workspace.getId(),
+                    workspace.getName(),
+                    workspace.getType(),
+                    isAvailable
+            );
+        }).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal calculateEstimatedPrice(BookingRequestDto requestDto) {
+        Workspace workspace = workspaceRepository.findById(requestDto.workspaceId())
+                .filter(w -> !w.isDeleted())
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace with ID " + requestDto.workspaceId() + " not found"));
+
+        boolean isDaily = requestDto.bookingType() == Tariff.BookingType.DAILY;
+        long hours = 0;
+
+        if (!isDaily) {
+            LocalTime start = requestDto.startTime();
+            LocalTime end = requestDto.endTime();
+
+            if (start == null || end == null || !end.isAfter(start)) {
+                throw new BadRequestException("Invalid time slot: end time must be after start time");
+            }
+
+            if (start.getMinute() != 0 || end.getMinute() != 0) {
+                throw new BadRequestException("Hourly booking is restricted to fixed 1-hour slots. Minutes must be 00.");
+            }
+
+            hours = Duration.between(start, end).toHours();
+            if (hours < 1 || hours > 4) {
+                throw new BadRequestException("Hourly booking must be between 1 and 4 hours");
+            }
+        }
+
+        Tariff tariff = tariffRepository.findByWorkspaceTypeAndBookingType(workspace.getType(), requestDto.bookingType())
+                .orElseThrow(() -> new ResourceNotFoundException("Tariff not found for this resource and booking type"));
+
+        return isDaily
+                ? tariff.getPrice()
+                : tariff.getPrice().multiply(BigDecimal.valueOf(hours));
+    }
 
     @Transactional
     public BookingResponseDto cancelBooking(Long bookingId, User currentUser) {
