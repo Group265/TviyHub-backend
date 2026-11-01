@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -62,6 +63,10 @@ public class BookingService {
         Workspace workspace = workspaceRepository.findById(requestDto.workspaceId())
                 .filter(w -> !w.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace with ID " + requestDto.workspaceId() + " not found"));
+
+        if (workspace.getType() == Workspace.WorkspaceType.MEETING_ROOM && requestDto.bookingType() == Tariff.BookingType.DAILY) {
+            throw new BadRequestException("The meeting room can be booked by the hour only.");
+        }
 
         LocalDate bookingDate = requestDto.bookingDate();
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
@@ -106,12 +111,14 @@ public class BookingService {
 
             finalRequestDto = requestDto;
         } else {
+            LocalTime defaultStart = (isAdmin && requestDto.startTime() != null) ? requestDto.startTime() : LocalTime.of(9, 0);
+            LocalTime defaultEnd = (isAdmin && requestDto.endTime() != null) ? requestDto.endTime() : LocalTime.of(19, 0);
             finalRequestDto = new BookingRequestDto(
                     requestDto.workspaceId(),
                     requestDto.bookingType(),
                     requestDto.bookingDate(),
-                    LocalTime.of(9, 0),
-                    LocalTime.of(19, 0)
+                    defaultStart,
+                    defaultEnd
             );
         }
 
@@ -218,6 +225,10 @@ public class BookingService {
                 .filter(w -> !w.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace with ID " + requestDto.workspaceId() + " not found"));
 
+        if (workspace.getType() == Workspace.WorkspaceType.MEETING_ROOM && requestDto.bookingType() == Tariff.BookingType.DAILY) {
+            throw new BadRequestException("The meeting room can be booked by the hour only.");
+        }
+
         boolean isDaily = requestDto.bookingType() == Tariff.BookingType.DAILY;
         long hours = 0;
 
@@ -261,7 +272,8 @@ public class BookingService {
                 throw new ForbiddenException("You can only cancel your own bookings");
             }
 
-            LocalDate today = LocalDate.now();
+            ZoneId kyivZone = ZoneId.of("Europe/Kyiv");
+            LocalDate today = LocalDate.now(kyivZone);
 
             if (booking.getBookingType() == Tariff.BookingType.DAILY) {
                 if (!today.isBefore(booking.getBookingDate())) {
@@ -272,8 +284,8 @@ public class BookingService {
                     if (today.isAfter(booking.getBookingDate())) {
                         throw new BadRequestException("Cannot cancel a past booking");
                     }
-                } else {
-                    LocalTime now = LocalTime.now();
+                } else if (today.equals(booking.getBookingDate())) {
+                    LocalTime now = LocalTime.now(kyivZone);
                     if (now.plusHours(2).isAfter(booking.getStartTime())) {
                         throw new BadRequestException("Hourly bookings can only be cancelled at least 2 hours before the start time");
                     }
