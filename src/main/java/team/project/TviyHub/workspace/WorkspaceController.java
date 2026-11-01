@@ -3,6 +3,9 @@ package team.project.TviyHub.workspace;
 import java.util.List;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,10 @@ import team.project.TviyHub.workspace.dto.WorkspaceResponse;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@ApiResponses({
+        @ApiResponse(responseCode = "401", description = "User is not authenticated", content = @Content),
+        @ApiResponse(responseCode = "403", description = "Forbidden: Access denied for non-admin users", content = @Content)
+})
 public class WorkspaceController {
 
     private final WorkspaceService workspaceService;
