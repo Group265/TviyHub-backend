@@ -16,8 +16,7 @@ public record BookingRequestDto(
         Tariff.BookingType bookingType,
 
         @NotNull(message = "Booking date is required")
-        @FutureOrPresent(message = "Booking date cannot be in the past")
-        List<LocalDate> bookingDates,
+        List<@FutureOrPresent(message = "Booking date cannot be in the past") LocalDate> bookingDates,
 
         LocalTime startTime,
         LocalTime endTime
