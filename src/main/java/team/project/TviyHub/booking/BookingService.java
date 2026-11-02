@@ -26,7 +26,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.List;
 
 @Service
@@ -63,7 +62,6 @@ public class BookingService {
     @Transactional
     public BookingResponseDto createBooking(BookingRequestDto requestDto, User currentUser) {
         Workspace workspace = workspaceRepository.findById(requestDto.workspaceId())
-                .filter(w -> !w.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace with ID " + requestDto.workspaceId() + " not found"));
 
         if (workspace.getType() == Workspace.WorkspaceType.MEETING_ROOM && requestDto.bookingType() == Tariff.BookingType.DAILY) {
