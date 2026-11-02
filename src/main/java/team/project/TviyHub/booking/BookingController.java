@@ -79,11 +79,11 @@ public class BookingController {
             @ApiResponse(responseCode = "409", description = "Conflict: Selected time slot overlaps with an existing booking, active subscription, or the hub is closed",
                     content = @Content)
     })
-    public ResponseEntity<BookingResponseDto> createBooking(
+    public ResponseEntity<List<BookingResponseDto>> createBooking(
             @Valid @RequestBody BookingRequestDto requestDto,
             @AuthenticationPrincipal User currentUser
     ) {
-        BookingResponseDto response = bookingService.createBooking(requestDto, currentUser);
+        List<BookingResponseDto> response = bookingService.createBooking(requestDto, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

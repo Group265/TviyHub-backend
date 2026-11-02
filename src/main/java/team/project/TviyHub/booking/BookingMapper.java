@@ -13,7 +13,7 @@ public interface BookingMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "bookingType", source = "dto.bookingType")
-    @Mapping(target = "bookingDate", source = "dto.bookingDate")
+    @Mapping(target = "bookingDate", ignore = true)
     @Mapping(target = "startTime", source = "dto.startTime")
     @Mapping(target = "endTime", source = "dto.endTime")
     @Mapping(target = "status", constant = "CONFIRMED")
