@@ -16,6 +16,7 @@ import team.project.TviyHub.user.Role;
 import team.project.TviyHub.user.User;
 
 import java.time.Instant;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.concurrent.CountDownLatch;
@@ -75,7 +76,7 @@ class BookingServiceConcurrencyTest {
     @Test
     void shouldPreventDoubleBookingWhenConcurrentRequestsOccur() throws InterruptedException {
         Long targetWorkspaceId = 1L;
-        LocalDate targetDate = LocalDate.now().plusDays(5);
+        LocalDate targetDate = nextWeekday(LocalDate.now().plusDays(5));
 
         BookingRequestDto requestDto = new BookingRequestDto(
                 targetWorkspaceId,
@@ -129,5 +130,13 @@ class BookingServiceConcurrencyTest {
 
         assertThat(successCount.get()).isEqualTo(1);
         assertThat(conflictCount.get()).isEqualTo(1);
+    }
+
+    /** Clients cannot book on weekends, so the test must not run on a Saturday or Sunday. */
+    private static LocalDate nextWeekday(LocalDate date) {
+        while (date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            date = date.plusDays(1);
+        }
+        return date;
     }
 }
