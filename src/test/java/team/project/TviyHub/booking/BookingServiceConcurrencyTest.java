@@ -1,6 +1,7 @@
 package team.project.TviyHub.booking;
 
 import jakarta.persistence.EntityManager;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,8 +16,8 @@ import team.project.TviyHub.tariff.Tariff;
 import team.project.TviyHub.user.Role;
 import team.project.TviyHub.user.User;
 
-import java.time.Instant;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.concurrent.CountDownLatch;
@@ -26,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
+@Slf4j
 @SpringBootTest
 @Import(TestcontainersConfig.class)
 class BookingServiceConcurrencyTest {
@@ -41,36 +43,23 @@ class BookingServiceConcurrencyTest {
 
     private User testUser1;
     private User testUser2;
+    private final AtomicInteger successCount = new AtomicInteger(0);
+    private final AtomicInteger conflictCount = new AtomicInteger(0);
 
     @BeforeEach
     void setup() {
         transactionTemplate.execute(status -> {
             entityManager.createQuery("DELETE FROM Booking").executeUpdate();
 
-            testUser1 = new User();
-            testUser1.setName("User One");
-            testUser1.setPhone("+380991111111");
-            testUser1.setEmail("user1@tviyhub.com");
-            testUser1.setPasswordHash("$2a$10$xyz");
-            testUser1.setRole(Role.USER);
-            testUser1.setCreatedAt(Instant.now());
-            testUser1.setBlocked(false);
-            testUser1.setEmailVerified(true);
-
-            testUser2 = new User();
-            testUser2.setName("User Two");
-            testUser2.setPhone("+380992222222");
-            testUser2.setEmail("user2@tviyhub.com");
-            testUser2.setPasswordHash("$2a$10$xyz");
-            testUser2.setRole(Role.USER);
-            testUser2.setCreatedAt(Instant.now());
-            testUser2.setBlocked(false);
-            testUser2.setEmailVerified(true);
+            testUser1 = createUser("User One", "+380991111111", "user1@tviyhub.com");
+            testUser2 = createUser("User Two", "+380992222222", "user2@tviyhub.com");
 
             entityManager.persist(testUser1);
             entityManager.persist(testUser2);
             return null;
         });
+        successCount.set(0);
+        conflictCount.set(0);
     }
 
     @Test
@@ -92,37 +81,8 @@ class BookingServiceConcurrencyTest {
         CountDownLatch latch = new CountDownLatch(1);
         CountDownLatch finishLatch = new CountDownLatch(numberOfThreads);
 
-        AtomicInteger successCount = new AtomicInteger(0);
-        AtomicInteger conflictCount = new AtomicInteger(0);
-        executorService.submit(() -> {
-            try {
-                latch.await();
-                bookingService.createBooking(requestDto, testUser1);
-                successCount.incrementAndGet();
-            } catch (ConflictException e) {
-                conflictCount.incrementAndGet();
-            } catch (PessimisticLockingFailureException e) {
-                conflictCount.incrementAndGet();
-            } catch (Exception ignored) {
-            } finally {
-                finishLatch.countDown();
-            }
-        });
-
-        executorService.submit(() -> {
-            try {
-                latch.await();
-                bookingService.createBooking(requestDto, testUser2);
-                successCount.incrementAndGet();
-            } catch (ConflictException e) {
-                conflictCount.incrementAndGet();
-            } catch (PessimisticLockingFailureException e) {
-                conflictCount.incrementAndGet();
-            } catch (Exception ignored) {
-            } finally {
-                finishLatch.countDown();
-            }
-        });
+        executorService.submit(() -> executeBookingTask(requestDto, testUser1, latch, finishLatch));
+        executorService.submit(() -> executeBookingTask(requestDto, testUser2, latch, finishLatch));
 
         latch.countDown();
         finishLatch.await();
@@ -130,6 +90,33 @@ class BookingServiceConcurrencyTest {
 
         assertThat(successCount.get()).isEqualTo(1);
         assertThat(conflictCount.get()).isEqualTo(1);
+    }
+
+    private User createUser(String name, String phone, String email) {
+        User user = new User();
+        user.setName(name);
+        user.setPhone(phone);
+        user.setEmail(email);
+        user.setPasswordHash("$2a$10$xyz");
+        user.setRole(Role.USER);
+        user.setCreatedAt(Instant.now());
+        user.setBlocked(false);
+        user.setEmailVerified(true);
+        return user;
+    }
+
+    private void executeBookingTask(BookingRequestDto dto, User user, CountDownLatch startLatch, CountDownLatch finishLatch) {
+        try {
+            startLatch.await();
+            bookingService.createBooking(dto, user);
+            successCount.incrementAndGet();
+        } catch (ConflictException | PessimisticLockingFailureException e) {
+            conflictCount.incrementAndGet();
+        } catch (Exception e) {
+            log.error("Unexpected error during concurrent booking for user: {}", user.getEmail(), e);
+        } finally {
+            finishLatch.countDown();
+        }
     }
 
     /** Clients cannot book on weekends, so the test must not run on a Saturday or Sunday. */
