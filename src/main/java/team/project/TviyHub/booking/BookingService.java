@@ -21,11 +21,13 @@ import team.project.TviyHub.workspace.Workspace;
 import team.project.TviyHub.workspace.WorkspaceRepository;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -60,7 +62,7 @@ public class BookingService {
     }
 
     @Transactional
-    public BookingResponseDto createBooking(BookingRequestDto requestDto, User currentUser) {
+    public List<BookingResponseDto> createBooking(BookingRequestDto requestDto, User currentUser) {
         Workspace workspace = workspaceRepository.findById(requestDto.workspaceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace with ID " + requestDto.workspaceId() + " not found"));
 
@@ -68,27 +70,31 @@ public class BookingService {
             throw new BadRequestException("The meeting room can be booked by the hour only.");
         }
 
-        LocalDate bookingDate = requestDto.bookingDate();
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
-
-        if (closedDayService.isDateClosed(bookingDate)) {
-            throw new ConflictException("The hub is closed on " + bookingDate + " (holiday, repair or special event)");
-        }
-
-        if (!isAdmin) {
-            java.time.DayOfWeek dayOfWeek = bookingDate.getDayOfWeek();
-            if (dayOfWeek == java.time.DayOfWeek.SATURDAY || dayOfWeek == java.time.DayOfWeek.SUNDAY) {
-                throw new BadRequestException("The hub is only open from Monday to Friday. Weekend booking is unavailable for clients");
-            }
-        }
-
         boolean isDaily = requestDto.bookingType() == Tariff.BookingType.DAILY;
 
-        BookingRequestDto finalRequestDto;
+        List<LocalDate> validDates = requestDto.bookingDates().stream()
+                .distinct()
+                .filter(date -> {
+                    if (closedDayService.isDateClosed(date)) {
+                        throw new ConflictException("The hub is closed on " + date + " (holiday, repair or special event)");
+                    }
+                    if (!isAdmin) {
+                        DayOfWeek dayOfWeek = date.getDayOfWeek();
+                        if (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })
+                .toList();
+
+        LocalTime start;
+        LocalTime end;
 
         if (!isDaily) {
-            LocalTime start = requestDto.startTime();
-            LocalTime end = requestDto.endTime();
+            start = requestDto.startTime();
+            end = requestDto.endTime();
 
             if (start == null || end == null || !end.isAfter(start)) {
                 throw new BadRequestException("Invalid time slot: end time must be after start time");
@@ -108,54 +114,60 @@ public class BookingService {
             if (hours < 1 || hours > 4) {
                 throw new BadRequestException("Hourly booking must be between 1 and 4 hours");
             }
-
-            finalRequestDto = requestDto;
         } else {
-            LocalTime defaultStart = (isAdmin && requestDto.startTime() != null) ? requestDto.startTime() : LocalTime.of(9, 0);
-            LocalTime defaultEnd = (isAdmin && requestDto.endTime() != null) ? requestDto.endTime() : LocalTime.of(19, 0);
-            finalRequestDto = new BookingRequestDto(
+            start = (isAdmin && requestDto.startTime() != null) ? requestDto.startTime() : LocalTime.of(9, 0);
+            end = (isAdmin && requestDto.endTime() != null) ? requestDto.endTime() : LocalTime.of(19, 0);
+        }
+
+        List<Booking> bookingsToSave = new ArrayList<>();
+        for (LocalDate date : validDates) {
+            if (workspace.getType() == Workspace.WorkspaceType.DESK) {
+                List<Subscription> activeSubs = subscriptionRepository.findOverlappingSubscriptions(
+                        workspace.getId(),
+                        date
+                );
+                if (!activeSubs.isEmpty()) {
+                    throw new ConflictException("This desk is occupied by an active subscription for this date");
+                }
+            }
+
+            List<Booking> activeBookings = bookingRepository.findActiveBookingsByWorkspaceAndDate(
+                    workspace.getId(),
+                    date
+            );
+
+            for (Booking existing : activeBookings) {
+                if (existing.getBookingType() == Tariff.BookingType.DAILY) {
+                    throw new ConflictException("Workspace is already booked for the whole day (DAILY)");
+                }
+                if (isDaily) {
+                    throw new ConflictException("Cannot book for the whole day. Hourly bookings already exist");
+                }
+                if (start.isBefore(existing.getEndTime()) && end.isAfter(existing.getStartTime())) {
+                    throw new ConflictException("Selected time slot overlaps with an existing booking");
+                }
+            }
+
+            BookingRequestDto singleDayDto = new BookingRequestDto(
                     requestDto.workspaceId(),
                     requestDto.bookingType(),
-                    requestDto.bookingDate(),
-                    defaultStart,
-                    defaultEnd
+                    List.of(date),
+                    start,
+                    end
             );
+
+            BigDecimal totalPrice = calculateEstimatedPrice(singleDayDto);
+
+            Booking booking = bookingMapper.toEntity(singleDayDto, currentUser, workspace);
+            booking.setBookingDate(date);
+            booking.setTotalPrice(totalPrice);
+            bookingsToSave.add(booking);
         }
+        List<Booking> savedBookings = bookingRepository.saveAll(bookingsToSave);
 
-        if (workspace.getType() == Workspace.WorkspaceType.DESK) {
-            List<Subscription> activeSubs = subscriptionRepository.findOverlappingSubscriptions(
-                    workspace.getId(),
-                    finalRequestDto.bookingDate()
-            );
-            if (!activeSubs.isEmpty()) {
-                throw new ConflictException("This desk is occupied by an active subscription for this date");
-            }
-        }
-
-        List<Booking> activeBookings = bookingRepository.findActiveBookingsByWorkspaceAndDate(
-                workspace.getId(),
-                finalRequestDto.bookingDate()
-        );
-
-        for (Booking existing : activeBookings) {
-            if (existing.getBookingType() == Tariff.BookingType.DAILY) {
-                throw new ConflictException("Workspace is already booked for the whole day (DAILY)");
-            }
-            if (isDaily) {
-                throw new ConflictException("Cannot book for the whole day. Hourly bookings already exist");
-            }
-            if (finalRequestDto.startTime().isBefore(existing.getEndTime()) && finalRequestDto.endTime().isAfter(existing.getStartTime())) {
-                throw new ConflictException("Selected time slot overlaps with an existing booking");
-            }
-        }
-
-        BigDecimal totalPrice = calculateEstimatedPrice(finalRequestDto);
-
-        Booking booking = bookingMapper.toEntity(finalRequestDto, currentUser, workspace);
-        booking.setTotalPrice(totalPrice);
-
-        Booking savedBooking = bookingRepository.save(booking);
-        return bookingMapper.toDto(savedBooking);
+        return savedBookings.stream()
+                .map(bookingMapper::toDto)
+                .toList();
     }
 
     @Transactional(readOnly = true)

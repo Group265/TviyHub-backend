@@ -4,6 +4,8 @@ import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
+
 import team.project.TviyHub.tariff.Tariff;
 
 public record BookingRequestDto(
@@ -15,7 +17,7 @@ public record BookingRequestDto(
 
         @NotNull(message = "Booking date is required")
         @FutureOrPresent(message = "Booking date cannot be in the past")
-        LocalDate bookingDate,
+        List<LocalDate> bookingDates,
 
         LocalTime startTime,
         LocalTime endTime
