@@ -46,6 +46,16 @@ class OpenApiTest {
 	}
 
 	@Test
+	void eventSchemasHaveExamples() throws Exception {
+		mockMvc.perform(get("/v3/api-docs"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.paths['/api/events']").exists())
+				.andExpect(jsonPath("$.components.schemas.HostEventRequest.properties.title.example").value("Weekend Hackathon"))
+				.andExpect(jsonPath("$.components.schemas.EventResponse.properties.freeSeats.description").isNotEmpty())
+				.andExpect(jsonPath("$.components.schemas.EventRequestResponse.properties.status.description").isNotEmpty());
+	}
+
+	@Test
 	void swaggerUiIsPublic() throws Exception {
 		mockMvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk());
 	}
