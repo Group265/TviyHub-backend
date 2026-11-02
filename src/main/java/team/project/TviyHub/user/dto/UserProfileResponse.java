@@ -1,18 +1,21 @@
 package team.project.TviyHub.user.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import team.project.TviyHub.user.Role;
 import team.project.TviyHub.user.User;
 
 import java.time.Instant;
 
 public record UserProfileResponse(
-		Long id,
-		String name,
-		String phone,
-		String email,
-		Role role,
+		@Schema(example = "1") Long id,
+		@Schema(example = "Olena Shevchenko") String name,
+		@Schema(example = "+380671234567") String phone,
+		@Schema(example = "olena@example.com") String email,
+		@Schema(description = "USER or ADMIN") Role role,
+		@Schema(description = "False until the code from the registration email is confirmed; password, phone and email changes require true",
+				example = "true")
 		boolean emailVerified,
-		Instant createdAt
+		@Schema(example = "2026-11-02T09:15:30Z") Instant createdAt
 ) {
 
 	public static UserProfileResponse from(User user) {

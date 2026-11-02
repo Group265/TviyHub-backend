@@ -35,6 +35,17 @@ class OpenApiTest {
 	}
 
 	@Test
+	void schemasHaveExamplesAndTheDescriptionExplainsTokenRefresh() throws Exception {
+		mockMvc.perform(get("/v3/api-docs"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.info.description").value(org.hamcrest.Matchers.containsString("/api/auth/refresh")))
+				.andExpect(jsonPath("$.components.schemas.RegisterRequest.properties.phone.example").value("+380671234567"))
+				.andExpect(jsonPath("$.components.schemas.AuthResponse.properties.refreshToken.description").isNotEmpty())
+				.andExpect(jsonPath("$.components.schemas.ChangeRoleRequest.properties.role.example").value("ADMIN"))
+				.andExpect(jsonPath("$.components.schemas.UserProfileResponse.properties.emailVerified.description").isNotEmpty());
+	}
+
+	@Test
 	void swaggerUiIsPublic() throws Exception {
 		mockMvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk());
 	}
