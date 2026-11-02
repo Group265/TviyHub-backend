@@ -1,0 +1,186 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-events-tables
+      author: tea
+      changes:
+        - createTable:
+            tableName: events
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: title
+                  type: VARCHAR(150)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: description
+                  type: TEXT
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: event_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_events_event_date
+
+              - column:
+                  name: start_time
+                  type: TIME
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: end_time
+                  type: TIME
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: capacity
+                  type: INT
+
+              - column:
+                  name: host_user_id
+                  type: BIGINT
+
+              - column:
+                  name: created_at
+                  type: DATETIME(6)
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            baseTableName: events
+            baseColumnNames: host_user_id
+            constraintName: fk_events_host_user
+            referencedTableName: users
+            referencedColumnNames: id
+            onDelete: SET NULL
+
+        - createTable:
+            tableName: event_requests
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: type
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: status
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_event_requests_user
+                    referencedTableName: users
+                    referencedColumnNames: id
+                    deleteCascade: true
+
+              - column:
+                  name: event_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_event_requests_event
+                    referencedTableName: events
+                    referencedColumnNames: id
+                    deleteCascade: true
+
+              - column:
+                  name: title
+                  type: VARCHAR(150)
+
+              - column:
+                  name: description
+                  type: TEXT
+
+              - column:
+                  name: event_date
+                  type: DATE
+
+              - column:
+                  name: start_time
+                  type: TIME
+
+              - column:
+                  name: end_time
+                  type: TIME
+
+              - column:
+                  name: capacity
+                  type: INT
+
+              - column:
+                  name: comment
+                  type: VARCHAR(500)
+
+              - column:
+                  name: review_comment
+                  type: VARCHAR(500)
+
+              - column:
+                  name: created_at
+                  type: DATETIME(6)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: reviewed_at
+                  type: DATETIME(6)
+
+              - column:
+                  name: reviewed_by
+                  type: BIGINT
+
+        - addForeignKeyConstraint:
+            baseTableName: event_requests
+            baseColumnNames: reviewed_by
+            constraintName: fk_event_requests_reviewer
+            referencedTableName: users
+            referencedColumnNames: id
+            onDelete: SET NULL
+
+        - createIndex:
+            tableName: event_requests
+            indexName: idx_event_requests_status
+            columns:
+              - column:
+                  name: status
+
+        - createIndex:
+            tableName: event_requests
+            indexName: idx_event_requests_user
+            columns:
+              - column:
+                  name: user_id
+
+        - createIndex:
+            tableName: event_requests
+            indexName: idx_event_requests_event
+            columns:
+              - column:
+                  name: event_id
