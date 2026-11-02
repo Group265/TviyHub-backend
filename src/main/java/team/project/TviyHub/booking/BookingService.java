@@ -79,11 +79,9 @@ public class BookingService {
                     if (closedDayService.isDateClosed(date)) {
                         throw new ConflictException("The hub is closed on " + date + " (holiday, repair or special event)");
                     }
-                    if (!isAdmin) {
-                        DayOfWeek dayOfWeek = date.getDayOfWeek();
-                        if (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) {
-                            return false;
-                        }
+                    DayOfWeek dayOfWeek = date.getDayOfWeek();
+                    if (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) {
+                        throw new BadRequestException("The hub is closed on weekends (" + date + "). Booking is unavailable.");
                     }
                     return true;
                 })
@@ -115,8 +113,8 @@ public class BookingService {
                 throw new BadRequestException("Hourly booking must be between 1 and 4 hours");
             }
         } else {
-            start = (isAdmin && requestDto.startTime() != null) ? requestDto.startTime() : LocalTime.of(9, 0);
-            end = (isAdmin && requestDto.endTime() != null) ? requestDto.endTime() : LocalTime.of(19, 0);
+            start = LocalTime.of(9, 0);
+            end = LocalTime.of(19, 0);
         }
 
         List<Booking> bookingsToSave = new ArrayList<>();
@@ -160,6 +158,8 @@ public class BookingService {
 
             Booking booking = bookingMapper.toEntity(singleDayDto, currentUser, workspace);
             booking.setBookingDate(date);
+            booking.setStartTime(start);
+            booking.setEndTime(end);
             booking.setTotalPrice(totalPrice);
             bookingsToSave.add(booking);
         }
