@@ -49,6 +49,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/tariffs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/closed-days/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/gallery/**").permitAll()
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/error").permitAll()
 						.requestMatchers("/api/admin/**").hasRole("ADMIN")
 						.anyRequest().authenticated())

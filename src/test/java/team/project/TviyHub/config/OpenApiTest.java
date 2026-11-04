@@ -56,6 +56,16 @@ class OpenApiTest {
 	}
 
 	@Test
+	void galleryEndpointsAreDocumented() throws Exception {
+		mockMvc.perform(get("/v3/api-docs"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.paths['/api/gallery']").exists())
+				.andExpect(jsonPath("$.paths['/api/gallery/{id}/image']").exists())
+				.andExpect(jsonPath("$.paths['/api/admin/gallery']").exists())
+				.andExpect(jsonPath("$.paths['/api/admin/gallery'].post.requestBody.content['multipart/form-data']").exists());
+	}
+
+	@Test
 	void swaggerUiIsPublic() throws Exception {
 		mockMvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk());
 	}
