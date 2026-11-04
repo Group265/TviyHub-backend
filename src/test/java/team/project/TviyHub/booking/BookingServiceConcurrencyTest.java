@@ -50,7 +50,9 @@ class BookingServiceConcurrencyTest {
     @BeforeEach
     void setup() {
         transactionTemplate.execute(status -> {
+            entityManager.createQuery("DELETE FROM Subscription").executeUpdate();
             entityManager.createQuery("DELETE FROM Booking").executeUpdate();
+            entityManager.createQuery("DELETE FROM User").executeUpdate();
 
             testUser1 = createUser("User One", "+380991111111", "user1@tviyhub.com");
             testUser2 = createUser("User Two", "+380992222222", "user2@tviyhub.com");
@@ -109,7 +111,7 @@ class BookingServiceConcurrencyTest {
     private void executeBookingTask(BookingRequestDto dto, User user, CountDownLatch startLatch, CountDownLatch finishLatch) {
         try {
             startLatch.await();
-            bookingService.createBooking(dto, user);
+            bookingService.createBooking(dto, user.getId());
             successCount.incrementAndGet();
         } catch (ConflictException | PessimisticLockingFailureException e) {
             conflictCount.incrementAndGet();

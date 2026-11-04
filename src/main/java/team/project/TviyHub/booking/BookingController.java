@@ -83,7 +83,7 @@ public class BookingController {
             @Valid @RequestBody BookingRequestDto requestDto,
             @AuthenticationPrincipal User currentUser
     ) {
-        List<BookingResponseDto> response = bookingService.createBooking(requestDto, currentUser);
+        List<BookingResponseDto> response = bookingService.createBooking(requestDto, currentUser.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

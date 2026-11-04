@@ -26,4 +26,17 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     );
 
     List<Booking> findByUserId(Long userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT b FROM Booking b 
+        WHERE b.workspace.id = :workspaceId 
+        AND b.bookingDate BETWEEN :startDate AND :endDate 
+        AND b.status = 'CONFIRMED'
+    """)
+    List<Booking> existsActiveBookingsInPeriod(
+            @Param("workspaceId") Long workspaceId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 }

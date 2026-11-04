@@ -1,7 +1,9 @@
 package team.project.TviyHub.booking;
 
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import team.project.TviyHub.booking.dto.BookingRequestDto;
 import team.project.TviyHub.booking.dto.BookingResponseDto;
@@ -17,6 +19,7 @@ import team.project.TviyHub.tariff.Tariff;
 import team.project.TviyHub.tariff.TariffRepository;
 import team.project.TviyHub.user.Role;
 import team.project.TviyHub.user.User;
+import team.project.TviyHub.user.UserRepository;
 import team.project.TviyHub.workspace.Workspace;
 import team.project.TviyHub.workspace.WorkspaceRepository;
 
@@ -37,9 +40,11 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final WorkspaceRepository workspaceRepository;
     private final TariffRepository tariffRepository;
+    private final UserRepository userRepository;
     private final ClosedDayService closedDayService;
     private final SubscriptionRepository subscriptionRepository;
     private final BookingMapper bookingMapper;
+    private final EntityManager entityManager;
 
     @Transactional(readOnly = true)
     public List<BookingResponseDto> getAllBookings(Long filterUserId, User currentUser) {
@@ -62,8 +67,12 @@ public class BookingService {
     }
 
     @Transactional
-    public List<BookingResponseDto> createBooking(BookingRequestDto requestDto, User currentUser) {
-        Workspace workspace = workspaceRepository.findById(requestDto.workspaceId())
+    public List<BookingResponseDto> createBooking(BookingRequestDto requestDto, Long userId) {
+
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        Workspace workspace = workspaceRepository.findByIdForUpdate(requestDto.workspaceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace with ID " + requestDto.workspaceId() + " not found"));
 
         if (workspace.getType() == Workspace.WorkspaceType.MEETING_ROOM && requestDto.bookingType() == Tariff.BookingType.DAILY) {
@@ -161,9 +170,12 @@ public class BookingService {
             booking.setStartTime(start);
             booking.setEndTime(end);
             booking.setTotalPrice(totalPrice);
+            booking.setStatus(Booking.BookingStatus.CONFIRMED);
             bookingsToSave.add(booking);
         }
         List<Booking> savedBookings = bookingRepository.saveAll(bookingsToSave);
+
+        entityManager.flush();
 
         return savedBookings.stream()
                 .map(bookingMapper::toDto)

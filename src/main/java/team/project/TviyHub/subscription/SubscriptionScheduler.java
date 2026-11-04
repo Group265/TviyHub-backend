@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -40,5 +42,28 @@ public class SubscriptionScheduler {
         }
 
         log.info("Cleanup process finished successfully. Automatically cancelled subscriptions count: {}", expiredSubscriptions.size());
+    }
+
+    @Scheduled(cron = "0 1 0 * * *")
+    @Transactional
+    public void expireCompletedSubscriptions() {
+        log.info("Starting background process to expire completed subscriptions...");
+
+        LocalDate todayInKyiv = LocalDate.now(ZoneId.of("Europe/Kyiv"));
+
+        List<Subscription> outdatedSubscriptions = subscriptionRepository
+                .findByStatusAndEndDateBefore(Subscription.SubscriptionStatus.ACTIVE, todayInKyiv);
+        if (outdatedSubscriptions.isEmpty()) {
+            log.info("No active subscriptions to expire today.");
+            return;
+        }
+
+        for (Subscription sub : outdatedSubscriptions) {
+            sub.setStatus(Subscription.SubscriptionStatus.EXPIRED);
+            log.info("Subscription ID {} has reached its end date ({}) and automatically changed status ot EXPIRED.",
+                    sub.getId(), sub.getEndDate());
+        }
+        log.info("Expiration process finished successfully. Automatically expired subscriptions count: {}",
+                outdatedSubscriptions.size());
     }
 }

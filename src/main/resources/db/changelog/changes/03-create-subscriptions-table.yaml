@@ -1,5 +1,34 @@
 databaseChangeLog:
   - changeSet:
+      id: 3-0-create-payments-table
+      author: acidden
+      changes:
+        - createTable:
+            tableName: payments
+            ifNotExists: true
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: DECIMAL(10,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: paid_at
+                  type: TIMESTAMP
+
+  - changeSet:
       id: 3-1-create-subscriptions-table
       author: acidden
       changes:
@@ -31,6 +60,15 @@ databaseChangeLog:
                     referencedTableName: resources
                     referencedColumnNames: id
               - column:
+                  name: payment_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    unique: true
+                    foreignKeyName: fk_sub_payment
+                    referencedTableName: payments
+                    referencedColumnNames: id
+              - column:
                   name: start_date
                   type: DATE
                   constraints:
@@ -42,11 +80,6 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: status
-                  type: VARCHAR(20)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: payment_status
                   type: VARCHAR(20)
                   constraints:
                     nullable: false
