@@ -109,7 +109,7 @@ class BookingServiceConcurrencyTest {
     private void executeBookingTask(BookingRequestDto dto, User user, CountDownLatch startLatch, CountDownLatch finishLatch) {
         try {
             startLatch.await();
-            bookingService.createBooking(dto, user);
+            bookingService.createBooking(dto, user.getId());
             successCount.incrementAndGet();
         } catch (ConflictException | PessimisticLockingFailureException e) {
             conflictCount.incrementAndGet();

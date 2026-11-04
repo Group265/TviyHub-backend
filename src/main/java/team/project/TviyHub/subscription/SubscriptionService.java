@@ -2,6 +2,7 @@ package team.project.TviyHub.subscription;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import team.project.TviyHub.booking.BookingRepository;
 import team.project.TviyHub.exception.ConflictException;
@@ -28,7 +29,7 @@ public class SubscriptionService {
     private final UserRepository userRepository;
     private final SubscriptionMapper subscriptionMapper;
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public Subscription createSubscription(Long userId, SubscriptionRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));

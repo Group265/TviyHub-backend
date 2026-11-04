@@ -96,7 +96,7 @@ class BookingVsSubscriptionConcurrencyTest {
         executorService.submit(() -> {
             try {
                 startLatch.await();
-                bookingService.createBooking(bookingRequest, testUser1);
+                bookingService.createBooking(bookingRequest, testUser1.getId());
                 successCount.incrementAndGet();
             } catch (ConflictException | PessimisticLockingFailureException e) {
                 conflictCount.incrementAndGet();

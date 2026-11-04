@@ -2,6 +2,7 @@ package team.project.TviyHub.booking;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import team.project.TviyHub.booking.dto.BookingRequestDto;
 import team.project.TviyHub.booking.dto.BookingResponseDto;
@@ -17,6 +18,7 @@ import team.project.TviyHub.tariff.Tariff;
 import team.project.TviyHub.tariff.TariffRepository;
 import team.project.TviyHub.user.Role;
 import team.project.TviyHub.user.User;
+import team.project.TviyHub.user.UserRepository;
 import team.project.TviyHub.workspace.Workspace;
 import team.project.TviyHub.workspace.WorkspaceRepository;
 
@@ -37,6 +39,7 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final WorkspaceRepository workspaceRepository;
     private final TariffRepository tariffRepository;
+    private final UserRepository userRepository;
     private final ClosedDayService closedDayService;
     private final SubscriptionRepository subscriptionRepository;
     private final BookingMapper bookingMapper;
@@ -61,8 +64,12 @@ public class BookingService {
                 .toList();
     }
 
-    @Transactional
-    public List<BookingResponseDto> createBooking(BookingRequestDto requestDto, User currentUser) {
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public List<BookingResponseDto> createBooking(BookingRequestDto requestDto, Long userId) {
+
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
         Workspace workspace = workspaceRepository.findByIdForUpdate(requestDto.workspaceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace with ID " + requestDto.workspaceId() + " not found"));
 
