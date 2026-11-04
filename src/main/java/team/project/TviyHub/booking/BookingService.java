@@ -1,5 +1,6 @@
 package team.project.TviyHub.booking;
 
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -43,6 +44,7 @@ public class BookingService {
     private final ClosedDayService closedDayService;
     private final SubscriptionRepository subscriptionRepository;
     private final BookingMapper bookingMapper;
+    private final EntityManager entityManager;
 
     @Transactional(readOnly = true)
     public List<BookingResponseDto> getAllBookings(Long filterUserId, User currentUser) {
@@ -64,7 +66,7 @@ public class BookingService {
                 .toList();
     }
 
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional
     public List<BookingResponseDto> createBooking(BookingRequestDto requestDto, Long userId) {
 
         User currentUser = userRepository.findById(userId)
@@ -168,9 +170,12 @@ public class BookingService {
             booking.setStartTime(start);
             booking.setEndTime(end);
             booking.setTotalPrice(totalPrice);
+            booking.setStatus(Booking.BookingStatus.CONFIRMED);
             bookingsToSave.add(booking);
         }
         List<Booking> savedBookings = bookingRepository.saveAll(bookingsToSave);
+
+        entityManager.flush();
 
         return savedBookings.stream()
                 .map(bookingMapper::toDto)

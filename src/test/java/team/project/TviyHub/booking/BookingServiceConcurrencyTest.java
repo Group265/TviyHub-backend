@@ -50,7 +50,9 @@ class BookingServiceConcurrencyTest {
     @BeforeEach
     void setup() {
         transactionTemplate.execute(status -> {
+            entityManager.createQuery("DELETE FROM Subscription").executeUpdate();
             entityManager.createQuery("DELETE FROM Booking").executeUpdate();
+            entityManager.createQuery("DELETE FROM User").executeUpdate();
 
             testUser1 = createUser("User One", "+380991111111", "user1@tviyhub.com");
             testUser2 = createUser("User Two", "+380992222222", "user2@tviyhub.com");

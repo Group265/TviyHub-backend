@@ -1,9 +1,10 @@
 package team.project.TviyHub.subscription;
 
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import team.project.TviyHub.booking.Booking;
 import team.project.TviyHub.booking.BookingRepository;
 import team.project.TviyHub.exception.ConflictException;
 import team.project.TviyHub.exception.ResourceNotFoundException;
@@ -28,8 +29,9 @@ public class SubscriptionService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final SubscriptionMapper subscriptionMapper;
+    private final EntityManager entityManager;
 
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional
     public Subscription createSubscription(Long userId, SubscriptionRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
@@ -53,8 +55,8 @@ public class SubscriptionService {
             throw new ConflictException("The desk is already held or active for the selected dates");
         }
 
-        boolean hasTargetBookings = bookingRepository.existsActiveBookingsInPeriod(workspace.getId(), startDate, endDate);
-        if (hasTargetBookings) {
+        List<Booking> hasTargetBookings = bookingRepository.existsActiveBookingsInPeriod(workspace.getId(), startDate, endDate);
+        if (!hasTargetBookings.isEmpty()) {
             throw new ConflictException("Cannot create subscription: this desk already has standard hourly/daily bookings within this period.");
         }
 
@@ -70,6 +72,8 @@ public class SubscriptionService {
         subscription.setEndDate(endDate);
         subscription.setStatus(Subscription.SubscriptionStatus.PENDING_PAYMENT);
         subscription.setPayment(pendingPayment);
+
+        entityManager.flush();
 
         return subscriptionRepository.save(subscription);
     }
@@ -138,12 +142,12 @@ public class SubscriptionService {
             throw new ConflictException("Cannot extend subscription: the extension period conflicts with another client's upcoming subscription");
         }
 
-        boolean hasTargetBookings = bookingRepository.existsActiveBookingsInPeriod(
+        List<Booking> targetBookings = bookingRepository.existsActiveBookingsInPeriod(
                 subscription.getWorkspace().getId(),
                 checkStartDate,
                 newEndDate
         );
-        if (hasTargetBookings) {
+        if (!targetBookings.isEmpty()) {
             throw new ConflictException("Cannot extend subscription: this desk already has standard hourly/daily bookings within the extension period.");
         }
         subscription.setEndDate(newEndDate);
