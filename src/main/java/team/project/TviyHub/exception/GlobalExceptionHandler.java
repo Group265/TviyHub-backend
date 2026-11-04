@@ -16,6 +16,17 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+	@ExceptionHandler(PayloadTooLargeException.class)
+	public ProblemDetail handlePayloadTooLarge(PayloadTooLargeException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.CONTENT_TOO_LARGE, ex.getMessage());
+	}
+
+	/** Raised by the servlet container when the upload exceeds the configured multipart limit. */
+	@ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+	public ProblemDetail handleMaxUploadSize(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.CONTENT_TOO_LARGE, "The file is too large");
+	}
+
 	@ExceptionHandler(MailException.class)
 	public ProblemDetail handleMail(MailException ex) {
 		log.error("Failed to send email", ex);

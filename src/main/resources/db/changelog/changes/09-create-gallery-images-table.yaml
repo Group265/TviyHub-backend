@@ -1,0 +1,62 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-gallery-images-table
+      author: tea
+      changes:
+        - createTable:
+            tableName: gallery_images
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: caption
+                  type: VARCHAR(200)
+
+              - column:
+                  name: content_type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: size_bytes
+                  type: INT
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: data
+                  type: LONGBLOB
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: uploaded_by
+                  type: BIGINT
+
+              - column:
+                  name: created_at
+                  type: DATETIME(6)
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            baseTableName: gallery_images
+            baseColumnNames: uploaded_by
+            constraintName: fk_gallery_images_user
+            referencedTableName: users
+            referencedColumnNames: id
+            onDelete: SET NULL
+
+        - createIndex:
+            tableName: gallery_images
+            indexName: idx_gallery_images_created_at
+            columns:
+              - column:
+                  name: created_at
