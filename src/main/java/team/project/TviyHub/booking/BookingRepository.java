@@ -26,4 +26,16 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     );
 
     List<Booking> findByUserId(Long userId);
+
+    @Query("""
+        SELECT COUNT(b) > 0 FROM Booking b 
+        WHERE b.workspace.id = :workspaceId 
+        AND b.bookingDate BETWEEN :startDate AND :endDate 
+        AND b.status = 'CONFIRMED'
+    """)
+    boolean existsActiveBookingsInPeriod(
+            @Param("workspaceId") Long workspaceId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 }

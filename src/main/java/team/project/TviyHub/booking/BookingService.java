@@ -63,7 +63,7 @@ public class BookingService {
 
     @Transactional
     public List<BookingResponseDto> createBooking(BookingRequestDto requestDto, User currentUser) {
-        Workspace workspace = workspaceRepository.findById(requestDto.workspaceId())
+        Workspace workspace = workspaceRepository.findByIdForUpdate(requestDto.workspaceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace with ID " + requestDto.workspaceId() + " not found"));
 
         if (workspace.getType() == Workspace.WorkspaceType.MEETING_ROOM && requestDto.bookingType() == Tariff.BookingType.DAILY) {
