@@ -7,11 +7,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.FutureOrPresent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import team.project.TviyHub.booking.dto.BookingRequestDto;
 import team.project.TviyHub.booking.dto.BookingResponseDto;
@@ -26,6 +28,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/bookings")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Bookings Management", description = "Endpoints for creating and managing hourly and daily bookings")
 public class BookingController {
 
@@ -54,7 +57,9 @@ public class BookingController {
             @ApiResponse(responseCode = "400", description = "Invalid parameters provided")
     })
     public ResponseEntity<List<WorkspaceAvailabilityDto>> getAvailabilityMap(
-            @RequestParam @DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam
+            @FutureOrPresent(message = "Availability date cannot be in the past")
+            @DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime endTime
     ) {
