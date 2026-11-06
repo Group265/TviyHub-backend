@@ -79,13 +79,24 @@ public class RefreshTokenService {
 	/** Logout: revokes the whole family of the given token. Unknown tokens are ignored. */
 	@Transactional
 	public void revoke(String rawToken) {
-		repository.findByTokenHash(hash(rawToken))
-				.ifPresent(t -> repository.revokeFamily(t.getFamilyId(), clock.instant()));
+		repository.findByTokenHash(hash(rawToken)).ifPresent(t -> {
+			repository.revokeFamily(t.getFamilyId(), clock.instant());
+			invalidateAccessTokens(t.getUserId());
+		});
 	}
 
 	@Transactional
 	public void revokeAllForUser(Long userId) {
 		repository.revokeAllForUser(userId, clock.instant());
+		invalidateAccessTokens(userId);
+	}
+
+	/**
+	 * Makes all access tokens issued so far unusable. The user entity is the same managed instance
+	 * the caller works with, so its later save does not overwrite the new version.
+	 */
+	private void invalidateAccessTokens(Long userId) {
+		userRepository.findById(userId).ifPresent(u -> u.setTokenVersion(u.getTokenVersion() + 1));
 	}
 
 	private String create(Long userId, String familyId) {

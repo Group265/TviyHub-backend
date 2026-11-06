@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-token-version-to-users
+      author: tea
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: token_version
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

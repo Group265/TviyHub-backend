@@ -59,7 +59,7 @@ public class UserController {
 
 	@PostMapping("/password/confirm")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@Operation(summary = "Change password: confirm with code", description = "Previously issued tokens stay valid until they expire.")
+	@Operation(summary = "Change password: confirm with code", description = "All sessions end: previously issued access tokens stop working at once and refresh tokens are revoked. Log in again with the new password.")
 	@ApiResponse(responseCode = "204", description = "Password changed")
 	@ApiResponse(responseCode = "400", description = "Invalid or expired code")
 	public void confirmPasswordChange(@AuthenticationPrincipal User user, @Valid @RequestBody CodeConfirmationRequest request) {

@@ -15,6 +15,8 @@ import java.time.Instant;
 @Service
 public class JwtService {
 
+	public static final String TOKEN_VERSION_CLAIM = "ver";
+
 	private final JwtEncoder jwtEncoder;
 	private final Duration lifetime;
 
@@ -34,6 +36,7 @@ public class JwtService {
 				.issuedAt(now)
 				.expiresAt(now.plus(lifetime))
 				.claim("role", user.getRole().name())
+				.claim(TOKEN_VERSION_CLAIM, user.getTokenVersion())
 				.build();
 		JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
 		return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
