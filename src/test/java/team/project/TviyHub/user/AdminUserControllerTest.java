@@ -227,8 +227,9 @@ class AdminUserControllerTest {
 		asAdmin(post("/api/admin/users/" + user.getId() + "/unblock"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.blocked").value(false));
+		// block ended all sessions: the old token stays dead, a new login works
 		mockMvc.perform(get("/api/users/me").header("Authorization", "Bearer " + userToken))
-				.andExpect(status().isOk());
+				.andExpect(status().isUnauthorized());
 		login("user@b.com", PASSWORD);
 	}
 

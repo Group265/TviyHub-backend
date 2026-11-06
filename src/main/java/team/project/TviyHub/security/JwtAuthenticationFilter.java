@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import team.project.TviyHub.user.User;
 
 import java.io.IOException;
 
@@ -43,7 +44,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		try {
 			Jwt jwt = jwtDecoder.decode(token);
 			UserDetails user = userDetailsService.loadUserById(Long.valueOf(jwt.getSubject()));
-			if (!user.isEnabled()) {
+			Long tokenVersion = jwt.getClaim(JwtService.TOKEN_VERSION_CLAIM);
+			int version = tokenVersion == null ? 0 : tokenVersion.intValue();
+			if (!user.isEnabled() || version != ((User) user).getTokenVersion()) {
 				SecurityContextHolder.clearContext();
 				return;
 			}

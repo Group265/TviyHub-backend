@@ -61,7 +61,7 @@ public class AuthController {
 
 	@PostMapping("/logout")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@Operation(summary = "Log out", description = "Revokes the session of the given refresh token. Always returns 204, even for an unknown token.")
+	@Operation(summary = "Log out", description = "Revokes the session of the given refresh token and immediately invalidates all access tokens of that user. Always returns 204, even for an unknown token.")
 	@ApiResponse(responseCode = "204", description = "Logged out")
 	public void logout(@Valid @RequestBody RefreshTokenRequest request) {
 		authService.logout(request.refreshToken());

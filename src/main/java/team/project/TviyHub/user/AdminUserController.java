@@ -116,7 +116,7 @@ public class AdminUserController {
 	@PostMapping("/{id}/reset-password")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@Operation(summary = "Set a new password for a user",
-			description = "Tokens issued before the reset stay valid until they expire.")
+			description = "All sessions of the user end: access tokens stop working at once and refresh tokens are revoked.")
 	@ApiResponse(responseCode = "204", description = "Password changed")
 	@ApiResponse(responseCode = "400", description = "Validation failed")
 	@ApiResponse(responseCode = "404", description = "User not found")

@@ -61,6 +61,11 @@ public class User implements UserDetails {
 	@Column(name = "email_verified", nullable = false)
 	private boolean emailVerified;
 
+	/** Bumped on logout and password change; access tokens carrying an older value stop working. */
+	@Builder.Default
+	@Column(name = "token_version", nullable = false)
+	private int tokenVersion = 0;
+
 	@Override
 	public boolean isEnabled() {
 		return !blocked;
