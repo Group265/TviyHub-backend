@@ -62,13 +62,11 @@ class PaymentControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Очищаем таблицы в правильном порядке зависимостей
         bookingRepository.deleteAll();
         paymentRepository.deleteAll();
         workspaceRepository.deleteAll();
         userRepository.deleteAll();
 
-        // 1. Создаем пользователей по вашей схеме БД
         clientUser = User.builder()
                 .name("Client Name")
                 .email("client@hub.com")
@@ -87,14 +85,12 @@ class PaymentControllerTest {
                 .build();
         adminUser = userRepository.save(adminUser);
 
-        // 2. Создаем ворксейс
         Workspace testWorkspace = Workspace.builder()
                 .name("Desk 1")
                 .type(Workspace.WorkspaceType.DESK)
                 .build();
         testWorkspace = workspaceRepository.save(testWorkspace);
 
-        // 3. Собираем бронирование
         Booking booking = Booking.builder()
                 .user(clientUser)
                 .workspace(testWorkspace)
@@ -105,18 +101,14 @@ class PaymentControllerTest {
                 .totalPrice(new BigDecimal("150.00"))
                 .status(Booking.BookingStatus.CONFIRMED)
                 .build();
-
-        // 4. Создаем связанный платеж (используем Билдер с явным указанием CASH, как мы фиксили)
         Payment payment = Payment.builder()
                 .status(Payment.PaymentStatus.UNPAID)
                 .paymentMethod(Payment.PaymentMethod.CASH)
                 .amount(new BigDecimal("150.00"))
                 .booking(booking)
                 .build();
-
         booking.setPayment(payment);
 
-        // Каскадно сохраняем всю связку
         Booking savedBooking = bookingRepository.save(booking);
         savedPayment = savedBooking.getPayment();
     }
@@ -147,14 +139,14 @@ class PaymentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PAID"))
                 .andExpect(jsonPath("$.paymentMethod").value("CARD"))
-                .andExpect(jsonPath("$.paidAt").isNotEmpty()); // Проверяем генерацию времени paidAt
+                .andExpect(jsonPath("$.paidAt").isNotEmpty());
     }
 
     @Test
     void clientShouldBeForbiddenToAccessAdminPayments() throws Exception {
         mockMvc.perform(get("/api/admin/payments")
                         .with(user(clientUser)))
-                .andExpect(status().isForbidden()); // Обычный USER должен ловить 403 статус
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -168,6 +160,6 @@ class PaymentControllerTest {
                         .with(user(adminUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
-                .andExpect(status().isNotFound()); // Ожидаем 404 на кастомный ResourceNotFoundException
+                .andExpect(status().isNotFound());
     }
 }
