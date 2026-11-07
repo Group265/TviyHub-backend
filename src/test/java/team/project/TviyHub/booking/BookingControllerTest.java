@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import team.project.TviyHub.TestcontainersConfig;
 import team.project.TviyHub.booking.dto.BookingRequestDto;
 import team.project.TviyHub.closedday.ClosedDayService;
+import team.project.TviyHub.payment.Payment;
 import team.project.TviyHub.tariff.Tariff;
 import team.project.TviyHub.tariff.TariffRepository;
 import team.project.TviyHub.user.Role;
@@ -106,6 +107,9 @@ public class BookingControllerTest {
         tariffRepository.save(hourlyTariff);
 
         LocalDate futureDate = LocalDate.now().plusWeeks(1);
+        while (futureDate.getDayOfWeek().getValue() > 5) {
+            futureDate = futureDate.plusDays(1);
+        }
         existingBooking = Booking.builder()
                 .user(testUser)
                 .workspace(testWorkspace)
@@ -115,8 +119,14 @@ public class BookingControllerTest {
                 .endTime(LocalTime.of(13, 0))
                 .totalPrice(new BigDecimal("150.00"))
                 .status(Booking.BookingStatus.CONFIRMED)
-                .paymentStatus("UNPAID")
                 .build();
+        Payment testPayment = Payment.builder()
+                .status(Payment.PaymentStatus.UNPAID)
+                .amount(new BigDecimal("150.00"))
+                .booking(existingBooking)
+                .build();
+        existingBooking.setPayment(testPayment);
+
         existingBooking = bookingRepository.save(existingBooking);
 
         when(closedDayService.isDateClosed(any())).thenReturn(false);

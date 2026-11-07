@@ -13,6 +13,7 @@ import team.project.TviyHub.exception.BadRequestException;
 import team.project.TviyHub.exception.ConflictException;
 import team.project.TviyHub.exception.ForbiddenException;
 import team.project.TviyHub.exception.ResourceNotFoundException;
+import team.project.TviyHub.payment.Payment;
 import team.project.TviyHub.subscription.Subscription;
 import team.project.TviyHub.subscription.SubscriptionRepository;
 import team.project.TviyHub.tariff.Tariff;
@@ -172,6 +173,15 @@ public class BookingService {
             booking.setTotalPrice(totalPrice);
             booking.setStatus(Booking.BookingStatus.CONFIRMED);
             bookingsToSave.add(booking);
+
+            Payment initialPayment = Payment.builder()
+                    .status(Payment.PaymentStatus.UNPAID)
+                    .amount(totalPrice)
+                    .booking(booking)
+                    .build();
+            booking.setPayment(initialPayment);
+
+            bookingsToSave.add(booking);
         }
         List<Booking> savedBookings = bookingRepository.saveAll(bookingsToSave);
 
@@ -319,8 +329,8 @@ public class BookingService {
 
         booking.setStatus(Booking.BookingStatus.CANCELLED);
 
-        if ("PAID".equals(booking.getPaymentStatus())) {
-            booking.setPaymentStatus("PAID");
+        if (booking.getPayment() != null && Payment.PaymentStatus.PAID.equals(booking.getPayment().getStatus())) {
+            booking.getPayment().setStatus(Payment.PaymentStatus.REFUNDED);
         }
 
         Booking saved = bookingRepository.save(booking);
