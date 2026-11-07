@@ -24,5 +24,6 @@ public interface BookingMapper {
     @Mapping(target = "userId", source = "user.id")
     @Mapping(target = "workspaceId", source = "workspace.id")
     @Mapping(target = "workspaceName", source = "workspace.name")
+    @Mapping(target = "paymentStatus", source = "booking.payment.status")
     BookingResponseDto toDto(Booking booking);
 }
