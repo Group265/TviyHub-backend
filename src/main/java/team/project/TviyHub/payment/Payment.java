@@ -49,6 +49,7 @@ public class Payment {
     @OneToOne(mappedBy = "payment", fetch = FetchType.LAZY)
     private Subscription subscription;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", nullable = false, length = 20)
     private PaymentMethod paymentMethod = PaymentMethod.CASH;
