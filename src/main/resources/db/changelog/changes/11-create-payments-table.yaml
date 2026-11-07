@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: 11-link-bookings-with-payments
+      author: acidden
+      changes:
+        - addColumn:
+            tableName: bookings
+            columns:
+              - column:
+                  name: payment_id
+                  type: BIGINT
+                  constraints:
+                    unique: true
+
+        - addForeignKeyConstraint:
+            baseTableName: bookings
+            baseColumnNames: payment_id
+            constraintName: fk_bookings_payment
+            referencedTableName: payments
+            referencedColumnNames: id
+            onDelete: CASCADE
+
+        - dropColumn:
+            tableName: bookings
+            columnName: payment_status
+
+        - addColumn:
+            tableName: payments
+            columns:
+              - column:
+                  name: payment_method
+                  type: VARCHAR(20)
+                  defaultValue: "CASH"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: external_transaction_id
+                  type: VARCHAR(100)
+                  constraints:
+                    unique: true
+

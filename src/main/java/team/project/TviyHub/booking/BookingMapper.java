@@ -17,7 +17,7 @@ public interface BookingMapper {
     @Mapping(target = "startTime", source = "dto.startTime")
     @Mapping(target = "endTime", source = "dto.endTime")
     @Mapping(target = "status", constant = "CONFIRMED")
-    @Mapping(target = "paymentStatus", constant = "UNPAID")
+    @Mapping(target = "payment", ignore = true)
     @Mapping(target = "totalPrice", ignore = true)
     Booking toEntity(BookingRequestDto dto, User user, Workspace workspace);
 

@@ -1,5 +1,6 @@
 package team.project.TviyHub.booking;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Enumerated;
@@ -10,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,6 +21,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import team.project.TviyHub.payment.Payment;
 import team.project.TviyHub.user.User;
 import team.project.TviyHub.workspace.Workspace;
 import team.project.TviyHub.tariff.Tariff;
@@ -64,9 +67,9 @@ public class Booking {
     @Column(nullable = false, length = 20)
     private BookingStatus status;
 
-    @Builder.Default
-    @Column(name = "payment_status", nullable = false, length = 20)
-    private String paymentStatus = "UNPAID";
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "payment_id", nullable = false)
+    private Payment payment;
 
     public enum BookingStatus {
         CONFIRMED,
