@@ -3,12 +3,12 @@ package team.project.TviyHub.booking;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import team.project.TviyHub.booking.dto.BookingRequestDto;
 import team.project.TviyHub.booking.dto.BookingResponseDto;
 import team.project.TviyHub.booking.dto.WorkspaceAvailabilityDto;
 import team.project.TviyHub.closedday.ClosedDayService;
+import team.project.TviyHub.event.EventRepository;
 import team.project.TviyHub.exception.BadRequestException;
 import team.project.TviyHub.exception.ConflictException;
 import team.project.TviyHub.exception.ForbiddenException;
@@ -44,6 +44,7 @@ public class BookingService {
     private final UserRepository userRepository;
     private final ClosedDayService closedDayService;
     private final SubscriptionRepository subscriptionRepository;
+    private final EventRepository eventRepository;
     private final BookingMapper bookingMapper;
     private final EntityManager entityManager;
 
@@ -86,6 +87,9 @@ public class BookingService {
         List<LocalDate> validDates = requestDto.bookingDates().stream()
                 .distinct()
                 .filter(date -> {
+                    if (eventRepository.existsByEventDate(date)) {
+                        throw new ConflictException("The hub is fully rented for an event on " + date);
+                    }
                     if (closedDayService.isDateClosed(date)) {
                         throw new ConflictException("The hub is closed on " + date + " (holiday, repair or special event)");
                     }
@@ -193,7 +197,7 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<WorkspaceAvailabilityDto> checkWorkspaceAvailability(LocalDate date, LocalTime startTime, LocalTime endTime) {
-        if (closedDayService.isDateClosed(date)) {
+        if (closedDayService.isDateClosed(date) || eventRepository.existsByEventDate(date)) {
             return workspaceRepository.findAll().stream()
                     .map(w -> new WorkspaceAvailabilityDto(w.getId(), w.getName(), w.getType(), false))
                     .toList();

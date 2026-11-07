@@ -101,12 +101,14 @@ class PaymentControllerTest {
                 .totalPrice(new BigDecimal("150.00"))
                 .status(Booking.BookingStatus.CONFIRMED)
                 .build();
+
         Payment payment = Payment.builder()
                 .status(Payment.PaymentStatus.UNPAID)
                 .paymentMethod(Payment.PaymentMethod.CASH)
                 .amount(new BigDecimal("150.00"))
                 .booking(booking)
                 .build();
+
         booking.setPayment(payment);
 
         Booking savedBooking = bookingRepository.save(booking);

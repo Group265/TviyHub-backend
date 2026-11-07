@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import team.project.TviyHub.TestcontainersConfig;
 import team.project.TviyHub.booking.dto.BookingRequestDto;
 import team.project.TviyHub.closedday.ClosedDayService;
+import team.project.TviyHub.event.Event;
+import team.project.TviyHub.event.EventRepository;
 import team.project.TviyHub.payment.Payment;
 import team.project.TviyHub.tariff.Tariff;
 import team.project.TviyHub.tariff.TariffRepository;
@@ -25,6 +27,7 @@ import team.project.TviyHub.workspace.Workspace;
 import team.project.TviyHub.workspace.WorkspaceRepository;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -58,6 +61,9 @@ public class BookingControllerTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private EventRepository eventRepository;
 
     @MockitoBean
     private ClosedDayService closedDayService;
@@ -217,6 +223,39 @@ public class BookingControllerTest {
                         .content(objectMapper.writeValueAsString(overlapRequest)))
                 .andExpect(status().isConflict());
     }
+
+    @Test
+    void shouldReturnConflictWhenBookingOnDayWithScheduledEvent() throws Exception {
+        LocalDate eventDate = LocalDate.now().plusWeeks(1);
+        while (eventDate.getDayOfWeek().getValue() > 5) {
+            eventDate = eventDate.plusDays(1);
+        }
+
+        Event scheduledEvent = new team.project.TviyHub.event.Event();
+        scheduledEvent.setTitle("IT Conference");
+        scheduledEvent.setDescription("Event day");
+        scheduledEvent.setEventDate(eventDate);
+        scheduledEvent.setStartTime(LocalTime.of(9, 0));
+        scheduledEvent.setEndTime(LocalTime.of(18, 0));
+        scheduledEvent.setCreatedAt(Instant.now());
+
+        eventRepository.saveAndFlush(scheduledEvent);
+
+        BookingRequestDto conflictRequest = new BookingRequestDto(
+                testWorkspace.getId(),
+                Tariff.BookingType.HOURLY,
+                List.of(eventDate),
+                LocalTime.of(14, 0),
+                LocalTime.of(15, 0)
+        );
+
+        mockMvc.perform(post("/api/bookings")
+                        .with(user(testUser))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(conflictRequest)))
+                .andExpect(status().isConflict());
+    }
+
 
     @Test
     void shouldCalculateEstimatedPrice() throws Exception {
