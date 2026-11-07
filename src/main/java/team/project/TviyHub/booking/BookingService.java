@@ -172,7 +172,6 @@ public class BookingService {
             booking.setEndTime(end);
             booking.setTotalPrice(totalPrice);
             booking.setStatus(Booking.BookingStatus.CONFIRMED);
-            bookingsToSave.add(booking);
 
             Payment initialPayment = Payment.builder()
                     .status(Payment.PaymentStatus.UNPAID)
