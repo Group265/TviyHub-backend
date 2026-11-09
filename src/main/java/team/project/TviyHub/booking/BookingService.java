@@ -170,18 +170,18 @@ public class BookingService {
 
             BigDecimal totalPrice = calculateEstimatedPrice(singleDayDto);
 
+            Payment initialPayment = Payment.builder()
+                    .status(Payment.PaymentStatus.UNPAID)
+                    .amount(totalPrice)
+                    .paymentMethod(Payment.PaymentMethod.CASH)
+                    .build();
+
             Booking booking = bookingMapper.toEntity(singleDayDto, currentUser, workspace);
             booking.setBookingDate(date);
             booking.setStartTime(start);
             booking.setEndTime(end);
             booking.setTotalPrice(totalPrice);
             booking.setStatus(Booking.BookingStatus.CONFIRMED);
-
-            Payment initialPayment = Payment.builder()
-                    .status(Payment.PaymentStatus.UNPAID)
-                    .amount(totalPrice)
-                    .booking(booking)
-                    .build();
             booking.setPayment(initialPayment);
 
             bookingsToSave.add(booking);

@@ -72,8 +72,7 @@ public class SubscriptionService {
         subscription.setEndDate(endDate);
         subscription.setStatus(Subscription.SubscriptionStatus.PENDING_PAYMENT);
         subscription.setPayment(pendingPayment);
-
-        entityManager.flush();
+        pendingPayment.setSubscription(subscription);
 
         return subscriptionRepository.save(subscription);
     }
