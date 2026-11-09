@@ -11,6 +11,8 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
 	Optional<User> findByEmail(String email);
 
+	Optional<User> findByGoogleId(String googleId);
+
 	boolean existsByEmailAndIdNot(String email, Long id);
 
 	boolean existsByPhoneAndIdNot(String phone, Long id);

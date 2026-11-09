@@ -38,14 +38,19 @@ public class User implements UserDetails {
 	@Column(nullable = false, length = 100)
 	private String name;
 
-	@Column(nullable = false, unique = true, length = 16)
+	/** Optional: people who sign in with Google can add it later. */
+	@Column(unique = true, length = 16)
 	private String phone;
 
 	@Column(nullable = false, unique = true)
 	private String email;
 
-	@Column(name = "password_hash", nullable = false, length = 100)
+	/** Null for accounts created through Google until the user sets a password via password reset. */
+	@Column(name = "password_hash", length = 100)
 	private String passwordHash;
+
+	@Column(name = "google_id", unique = true)
+	private String googleId;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)

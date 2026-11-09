@@ -107,6 +107,9 @@ public class UserService {
 	}
 
 	private void requireCurrentPassword(User user, String currentPassword) {
+		if (user.getPasswordHash() == null) {
+			throw new BadRequestException("This account has no password yet; set one via forgot-password");
+		}
 		if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
 			throw new BadRequestException("Current password is incorrect");
 		}

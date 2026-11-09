@@ -30,6 +30,11 @@ public class GlobalExceptionHandler {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.CONTENT_TOO_LARGE, "The file is too large");
 	}
 
+	@ExceptionHandler(ServiceUnavailableException.class)
+	public ProblemDetail handleServiceUnavailable(ServiceUnavailableException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+	}
+
 	@ExceptionHandler(MailException.class)
 	public ProblemDetail handleMail(MailException ex) {
 		log.error("Failed to send email", ex);
