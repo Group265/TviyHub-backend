@@ -13,13 +13,18 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import team.project.TviyHub.config.OpenApiConfig;
 import team.project.TviyHub.user.dto.ChangeEmailRequest;
 import team.project.TviyHub.user.dto.ChangePasswordRequest;
 import team.project.TviyHub.user.dto.ChangePhoneRequest;
+import team.project.TviyHub.user.bookings.BookingHistoryItem;
+import team.project.TviyHub.user.bookings.BookingHistoryScope;
+import team.project.TviyHub.user.bookings.BookingHistoryService;
 import team.project.TviyHub.user.dto.CodeConfirmationRequest;
+import team.project.TviyHub.user.dto.PageResponse;
 import team.project.TviyHub.user.dto.UpdateUserDto;
 import team.project.TviyHub.user.dto.UserProfileResponse;
 
@@ -32,11 +37,25 @@ import team.project.TviyHub.user.dto.UserProfileResponse;
 public class UserController {
 
 	private final UserService userService;
+	private final BookingHistoryService bookingHistoryService;
 
 	@GetMapping
 	@Operation(summary = "Get own profile")
 	public UserProfileResponse me(@AuthenticationPrincipal User user) {
 		return userService.getProfile(user.getId());
+	}
+
+	@GetMapping("/bookings")
+	@Operation(summary = "Booking history of the current user",
+			description = "The date and the place of every booking. scope: all (default, newest first), upcoming (from today, nearest first) or past (before today, newest first). Cancelled bookings are included with their status.")
+	@ApiResponse(responseCode = "200", description = "A page of bookings")
+	@ApiResponse(responseCode = "400", description = "Unknown scope")
+	public PageResponse<BookingHistoryItem> bookings(
+			@AuthenticationPrincipal User user,
+			@RequestParam(required = false) String scope,
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "20") int size) {
+		return bookingHistoryService.list(user.getId(), BookingHistoryScope.parse(scope), page, size);
 	}
 
 	@PatchMapping
