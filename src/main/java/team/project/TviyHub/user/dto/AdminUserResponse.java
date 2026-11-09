@@ -9,7 +9,7 @@ import java.time.Instant;
 public record AdminUserResponse(
 		@Schema(example = "1") Long id,
 		@Schema(example = "Olena Shevchenko") String name,
-		@Schema(example = "+380671234567") String phone,
+		@Schema(description = "Null for Google accounts until a phone is added", example = "+380671234567", nullable = true) String phone,
 		@Schema(example = "olena@example.com") String email,
 		@Schema(description = "USER or ADMIN") Role role,
 		@Schema(description = "A blocked user cannot log in or refresh tokens", example = "false")

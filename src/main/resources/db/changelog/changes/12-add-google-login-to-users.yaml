@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-google-login-to-users
+      author: tea
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: google_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: true
+                    unique: true
+                    uniqueConstraintName: uk_users_google_id
+        - dropNotNullConstraint:
+            tableName: users
+            columnName: phone
+            columnDataType: VARCHAR(16)
+        - dropNotNullConstraint:
+            tableName: users
+            columnName: password_hash
+            columnDataType: VARCHAR(100)

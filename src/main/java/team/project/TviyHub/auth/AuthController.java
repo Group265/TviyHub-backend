@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import team.project.TviyHub.auth.dto.AuthResponse;
 import team.project.TviyHub.auth.dto.EmailRequest;
+import team.project.TviyHub.auth.dto.GoogleLoginRequest;
 import team.project.TviyHub.auth.dto.LoginRequest;
 import team.project.TviyHub.auth.dto.ResetPasswordWithCodeRequest;
 import team.project.TviyHub.auth.dto.VerifyEmailRequest;
@@ -47,6 +48,18 @@ public class AuthController {
 	@ApiResponse(responseCode = "429", description = "Too many requests or login temporarily locked")
 	public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
 		return authService.login(request, httpRequest.getRemoteAddr());
+	}
+
+	@PostMapping("/google")
+	@Operation(summary = "Log in with Google", description = "Takes the ID token from Google Sign-In on the frontend. Creates the account on the first sign-in or links an existing account with the same email. Returns the same tokens as login.")
+	@ApiResponse(responseCode = "200", description = "Tokens issued")
+	@ApiResponse(responseCode = "400", description = "idToken is missing")
+	@ApiResponse(responseCode = "401", description = "Invalid Google token or the Google email is not verified")
+	@ApiResponse(responseCode = "403", description = "Account is blocked")
+	@ApiResponse(responseCode = "429", description = "Too many requests")
+	@ApiResponse(responseCode = "503", description = "Google sign-in is not configured")
+	public AuthResponse google(@Valid @RequestBody GoogleLoginRequest request) {
+		return authService.loginWithGoogle(request.idToken());
 	}
 
 	@PostMapping("/refresh")

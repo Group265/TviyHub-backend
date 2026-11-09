@@ -21,3 +21,5 @@ databaseChangeLog:
       file: db/changelog/changes/10-add-token-version-to-users.yaml
   - include:
       file: db/changelog/changes/11-create-payments-table.yaml
+  - include:
+      file: db/changelog/changes/12-add-google-login-to-users.yaml
