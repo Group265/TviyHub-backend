@@ -22,4 +22,6 @@ jobs:
           cache: maven
 
       - name: Build with Maven
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
         run: mvn --batch-mode --update-snapshots verify
