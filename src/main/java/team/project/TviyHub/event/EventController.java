@@ -40,7 +40,8 @@ public class EventController {
 	@GetMapping("/events")
 	@Operation(summary = "Event calendar (public)",
 			description = "UPCOMING (default) returns future events, nearest first; PAST returns past events, newest first. "
-					+ "from and to narrow the date range.")
+					+ "from and to narrow the date range (format yyyy-MM-dd).")
+	@ApiResponse(responseCode = "400", description = "Unknown period or invalid date")
 	public List<EventResponse> list(
 			@RequestParam(defaultValue = "UPCOMING") EventService.Period period,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -61,7 +62,8 @@ public class EventController {
 	@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
 	@Operation(summary = "Ask to take part in an event",
 			description = "Requires a verified email. Created with status NEW; an admin approves or rejects it.")
-	@ApiResponse(responseCode = "400", description = "The event has passed or you are its organizer")
+	@ApiResponse(responseCode = "400", description = "Validation failed, the event has passed or you are its organizer")
+	@ApiResponse(responseCode = "401", description = "Authentication required")
 	@ApiResponse(responseCode = "403", description = "Email is not verified")
 	@ApiResponse(responseCode = "404", description = "Event not found")
 	@ApiResponse(responseCode = "409", description = "You already have an active request for this event")
@@ -77,6 +79,7 @@ public class EventController {
 			description = "The hub is rented as a whole, so the date must be a free Saturday or Sunday. "
 					+ "Requires a verified email. When an admin approves it, the event is created with you as organizer.")
 	@ApiResponse(responseCode = "400", description = "Validation failed, not a weekend or the date is in the past")
+	@ApiResponse(responseCode = "401", description = "Authentication required")
 	@ApiResponse(responseCode = "403", description = "Email is not verified")
 	@ApiResponse(responseCode = "409", description = "The date is taken, closed or has confirmed bookings")
 	public EventRequestResponse host(@AuthenticationPrincipal User user, @Valid @RequestBody HostEventRequest request) {
@@ -86,6 +89,7 @@ public class EventController {
 	@GetMapping("/users/me/event-requests")
 	@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
 	@Operation(summary = "My event requests with their statuses", description = "Newest first.")
+	@ApiResponse(responseCode = "401", description = "Authentication required")
 	public List<EventRequestResponse> mine(@AuthenticationPrincipal User user) {
 		return requestService.myRequests(user.getId());
 	}
@@ -94,6 +98,7 @@ public class EventController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
 	@Operation(summary = "Withdraw my request", description = "Only requests with status NEW can be withdrawn.")
+	@ApiResponse(responseCode = "401", description = "Authentication required")
 	@ApiResponse(responseCode = "404", description = "Request not found")
 	@ApiResponse(responseCode = "409", description = "The request has already been reviewed")
 	public void withdraw(@AuthenticationPrincipal User user, @PathVariable Long id) {

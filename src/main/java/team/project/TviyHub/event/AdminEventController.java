@@ -46,6 +46,7 @@ public class AdminEventController {
 	@GetMapping("/event-requests")
 	@Operation(summary = "List event requests",
 			description = "Filter by status (default NEW) and type. Oldest first, so the queue is handled in order.")
+	@ApiResponse(responseCode = "400", description = "Unknown status or type")
 	public PageResponse<EventRequestResponse> list(
 			@RequestParam(defaultValue = "NEW") EventRequestStatus status,
 			@RequestParam(required = false) EventRequestType type,
@@ -58,6 +59,7 @@ public class AdminEventController {
 	@Operation(summary = "Approve a request",
 			description = "HOST: creates the event with the requester as organizer. ATTEND: adds a participant if there are free seats. "
 					+ "The user is notified by email.")
+	@ApiResponse(responseCode = "400", description = "ATTEND: the event has already taken place")
 	@ApiResponse(responseCode = "404", description = "Request not found")
 	@ApiResponse(responseCode = "409", description = "Already reviewed, the date is no longer free, or the event is full")
 	public EventRequestResponse approve(@AuthenticationPrincipal User admin, @PathVariable Long id) {
