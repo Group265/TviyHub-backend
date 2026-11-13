@@ -44,7 +44,9 @@ public class AuthController {
 	@PostMapping("/login")
 	@Operation(summary = "Log in", description = "Returns a JWT for the Authorization: Bearer header.")
 	@ApiResponse(responseCode = "200", description = "Token issued")
-	@ApiResponse(responseCode = "401", description = "Invalid email or password")
+	@ApiResponse(responseCode = "400", description = "Validation failed")
+	@ApiResponse(responseCode = "401", description = "Invalid email or password (also for accounts created through Google that have no password yet)")
+	@ApiResponse(responseCode = "403", description = "Account is blocked")
 	@ApiResponse(responseCode = "429", description = "Too many requests or login temporarily locked")
 	public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
 		return authService.login(request, httpRequest.getRemoteAddr());
@@ -65,6 +67,7 @@ public class AuthController {
 	@PostMapping("/refresh")
 	@Operation(summary = "Get a new access token", description = "Exchanges a refresh token for a new access token and a new refresh token. The old refresh token stops working; reusing it revokes the whole session.")
 	@ApiResponse(responseCode = "200", description = "Tokens issued")
+	@ApiResponse(responseCode = "400", description = "refreshToken is missing")
 	@ApiResponse(responseCode = "401", description = "Invalid, expired or already used refresh token")
 	@ApiResponse(responseCode = "403", description = "Account is blocked")
 	@ApiResponse(responseCode = "429", description = "Too many requests")
@@ -76,15 +79,19 @@ public class AuthController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@Operation(summary = "Log out", description = "Revokes the session of the given refresh token and immediately invalidates all access tokens of that user. Always returns 204, even for an unknown token.")
 	@ApiResponse(responseCode = "204", description = "Logged out")
+	@ApiResponse(responseCode = "400", description = "refreshToken is missing")
+	@ApiResponse(responseCode = "429", description = "Too many requests")
 	public void logout(@Valid @RequestBody RefreshTokenRequest request) {
 		authService.logout(request.refreshToken());
 	}
 
 	@PostMapping("/verify-email")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@Operation(summary = "Confirm the email with the code sent at registration")
+	@Operation(summary = "Confirm the email with the code sent at registration",
+			description = "An unknown email gets the same 400 as a wrong code, so the response does not reveal whether the email is registered.")
 	@ApiResponse(responseCode = "204", description = "Email verified")
-	@ApiResponse(responseCode = "400", description = "Invalid or expired code")
+	@ApiResponse(responseCode = "400", description = "Invalid or expired code, or validation failed")
+	@ApiResponse(responseCode = "429", description = "Too many requests")
 	public void verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
 		authService.verifyEmail(request);
 	}
@@ -93,7 +100,8 @@ public class AuthController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@Operation(summary = "Send a new verification code", description = "Always returns 204, whether or not the email is registered.")
 	@ApiResponse(responseCode = "204", description = "Accepted")
-	@ApiResponse(responseCode = "429", description = "Code was requested too recently")
+	@ApiResponse(responseCode = "400", description = "Validation failed")
+	@ApiResponse(responseCode = "429", description = "Code was requested too recently, or too many requests")
 	public void resendVerification(@Valid @RequestBody EmailRequest request) {
 		authService.resendVerification(request);
 	}
@@ -102,16 +110,19 @@ public class AuthController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@Operation(summary = "Send a password reset code", description = "Always returns 204, whether or not the email is registered.")
 	@ApiResponse(responseCode = "204", description = "Accepted")
-	@ApiResponse(responseCode = "429", description = "Code was requested too recently")
+	@ApiResponse(responseCode = "400", description = "Validation failed")
+	@ApiResponse(responseCode = "429", description = "Code was requested too recently, or too many requests")
 	public void forgotPassword(@Valid @RequestBody EmailRequest request) {
 		authService.forgotPassword(request);
 	}
 
 	@PostMapping("/reset-password")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@Operation(summary = "Set a new password using the emailed code")
+	@Operation(summary = "Set a new password using the emailed code",
+			description = "Ends all sessions of the user. Also the way for a Google account to set its first password.")
 	@ApiResponse(responseCode = "204", description = "Password changed")
 	@ApiResponse(responseCode = "400", description = "Invalid or expired code, or validation failed")
+	@ApiResponse(responseCode = "429", description = "Too many requests")
 	public void resetPassword(@Valid @RequestBody ResetPasswordWithCodeRequest request) {
 		authService.resetPassword(request);
 	}

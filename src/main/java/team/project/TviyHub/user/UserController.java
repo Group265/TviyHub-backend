@@ -67,9 +67,9 @@ public class UserController {
 
 	@PostMapping("/password/request")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@Operation(summary = "Change password: send code", description = "Requires the current password and a verified email. A code is sent to the current email.")
+	@Operation(summary = "Change password: send code", description = "Requires the current password and a verified email. A code is sent to the current email. Accounts created through Google have no password yet: they get 400 and should use forgot-password.")
 	@ApiResponse(responseCode = "204", description = "Code sent")
-	@ApiResponse(responseCode = "400", description = "Validation failed or current password is incorrect")
+	@ApiResponse(responseCode = "400", description = "Validation failed, current password is incorrect or the account has no password")
 	@ApiResponse(responseCode = "403", description = "Email is not verified")
 	@ApiResponse(responseCode = "429", description = "Code was requested too recently")
 	public void requestPasswordChange(@AuthenticationPrincipal User user, @Valid @RequestBody ChangePasswordRequest request) {
@@ -81,6 +81,7 @@ public class UserController {
 	@Operation(summary = "Change password: confirm with code", description = "All sessions end: previously issued access tokens stop working at once and refresh tokens are revoked. Log in again with the new password.")
 	@ApiResponse(responseCode = "204", description = "Password changed")
 	@ApiResponse(responseCode = "400", description = "Invalid or expired code")
+	@ApiResponse(responseCode = "403", description = "Email is not verified")
 	public void confirmPasswordChange(@AuthenticationPrincipal User user, @Valid @RequestBody CodeConfirmationRequest request) {
 		userService.confirmPasswordChange(user.getId(), request.code());
 	}
@@ -89,6 +90,7 @@ public class UserController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@Operation(summary = "Change phone: send code", description = "Requires a verified email. A code is sent to the current email.")
 	@ApiResponse(responseCode = "204", description = "Code sent")
+	@ApiResponse(responseCode = "400", description = "Validation failed (the phone must be in international format)")
 	@ApiResponse(responseCode = "403", description = "Email is not verified")
 	@ApiResponse(responseCode = "409", description = "Phone is already in use")
 	@ApiResponse(responseCode = "429", description = "Code was requested too recently")
@@ -97,8 +99,9 @@ public class UserController {
 	}
 
 	@PostMapping("/phone/confirm")
-	@Operation(summary = "Change phone: confirm with code")
+	@Operation(summary = "Change phone: confirm with code", description = "Also the way for a Google account to add its first phone.")
 	@ApiResponse(responseCode = "400", description = "Invalid or expired code")
+	@ApiResponse(responseCode = "403", description = "Email is not verified")
 	@ApiResponse(responseCode = "409", description = "Phone is already in use")
 	public UserProfileResponse confirmPhoneChange(@AuthenticationPrincipal User user, @Valid @RequestBody CodeConfirmationRequest request) {
 		return userService.confirmPhoneChange(user.getId(), request.code());
@@ -106,9 +109,9 @@ public class UserController {
 
 	@PostMapping("/email/request")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@Operation(summary = "Change email: send code", description = "Requires the current password and a verified email. A code is sent to the NEW address.")
+	@Operation(summary = "Change email: send code", description = "Requires the current password and a verified email. A code is sent to the NEW address. Accounts created through Google have no password yet: they get 400 and should use forgot-password.")
 	@ApiResponse(responseCode = "204", description = "Code sent")
-	@ApiResponse(responseCode = "400", description = "Validation failed or current password is incorrect")
+	@ApiResponse(responseCode = "400", description = "Validation failed, current password is incorrect or the account has no password")
 	@ApiResponse(responseCode = "403", description = "Email is not verified")
 	@ApiResponse(responseCode = "409", description = "Email is already in use")
 	@ApiResponse(responseCode = "429", description = "Code was requested too recently")
@@ -119,6 +122,7 @@ public class UserController {
 	@PostMapping("/email/confirm")
 	@Operation(summary = "Change email: confirm with code (sent to the new address)")
 	@ApiResponse(responseCode = "400", description = "Invalid or expired code")
+	@ApiResponse(responseCode = "403", description = "Email is not verified")
 	@ApiResponse(responseCode = "409", description = "Email is already in use")
 	public UserProfileResponse confirmEmailChange(@AuthenticationPrincipal User user, @Valid @RequestBody CodeConfirmationRequest request) {
 		return userService.confirmEmailChange(user.getId(), request.code());

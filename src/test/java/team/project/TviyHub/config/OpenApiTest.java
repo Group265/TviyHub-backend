@@ -65,6 +65,47 @@ class OpenApiTest {
 				.andExpect(jsonPath("$.paths['/api/admin/gallery'].post.requestBody.content['multipart/form-data']").exists());
 	}
 
+	/**
+	 * Guards against the docs falling behind the code for the auth, user, event and gallery endpoints:
+	 * every operation has a summary, secured ones document 401, admin ones document 403.
+	 */
+	@Test
+	@SuppressWarnings("unchecked")
+	void operationsOfAuthUserEventAndGalleryAreDescribedConsistently() throws Exception {
+		String body = mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+				.andReturn().getResponse().getContentAsString();
+		java.util.Map<String, java.util.Map<String, java.util.Map<String, Object>>> paths =
+				com.jayway.jsonpath.JsonPath.read(body, "$.paths");
+
+		java.util.List<String> mine = java.util.List.of("/api/auth/", "/api/users/", "/api/admin/users", "/api/events",
+				"/api/admin/events", "/api/admin/event-requests", "/api/admin/gallery", "/api/gallery");
+		java.util.List<String> expectedPaths = java.util.List.of("/api/auth/google", "/api/auth/forgot-password",
+				"/api/auth/reset-password", "/api/users/me/bookings", "/api/users/me/event-requests",
+				"/api/admin/users/{id}/block", "/api/admin/event-requests");
+		org.assertj.core.api.Assertions.assertThat(paths.keySet()).containsAll(expectedPaths);
+
+		java.util.List<String> problems = new java.util.ArrayList<>();
+		paths.forEach((path, operations) -> {
+			if (mine.stream().noneMatch(path::startsWith)) {
+				return;
+			}
+			operations.forEach((method, operation) -> {
+				String name = method.toUpperCase() + " " + path;
+				java.util.Map<String, Object> responses = (java.util.Map<String, Object>) operation.get("responses");
+				if (operation.get("summary") == null) {
+					problems.add(name + " has no summary");
+				}
+				if (operation.get("security") != null && !responses.containsKey("401")) {
+					problems.add(name + " is secured but does not document 401");
+				}
+				if (path.startsWith("/api/admin") && !responses.containsKey("403")) {
+					problems.add(name + " is for admins but does not document 403");
+				}
+			});
+		});
+		org.assertj.core.api.Assertions.assertThat(problems).isEmpty();
+	}
+
 	@Test
 	void swaggerUiIsPublic() throws Exception {
 		mockMvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk());
