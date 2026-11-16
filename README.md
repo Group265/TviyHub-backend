@@ -41,3 +41,17 @@ Once the server is running, you can access the OpenAPI documentation at:
 3. Copy the `sessionUrl` from the response payload, paste it into your browser, and complete the transaction using the global test card number: `4242 4242 4242 4242`.
 4. After being redirected, extract the `session_id` parameter value from the browser's address bar.
 5. Paste this token into the `GET /api/payments/success` endpoint to verify the transaction. The database entry status will switch to `PAID`.
+
+## Emails with confirmation codes
+
+Registration, password reset and profile changes send one-time codes by email. The shared SMTP settings of the team (Brevo) live in `.env.team`. The file contains the real key, so it is **not in git** (GitHub blocks pushes that contain secrets): get it from the team (password manager) and put it in the project root. `.env.team.sample` shows the format:
+
+* `docker-compose up` and `./mvnw spring-boot:run` both read `.env.team` first and then your local `.env`.
+* To use your own SMTP, set `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` and `MAIL_FROM` in your `.env`; they override `.env.team`.
+* On startup the log shows `Email: SMTP <host>, from=<address>`. If it says `MAIL_HOST is empty`, the codes are only written to the log.
+
+**Important for testers:** Brevo only accepts connections from allowed IP addresses. Before testing emails, add your own public IP in Brevo (Security → Authorized IPs; you can find your IP at https://api.ipify.org). Without it registration fails with 503 and the log shows `525 5.7.1 Unauthorized IP address` or `535 Authentication failed`. Ask the person who owns the Brevo account to add it, or send them your IP.
+
+If the SMTP key ever leaks, issue a new SMTP key in Brevo and update `.env.team` for everyone.
+
+If emails do not arrive, check: the key is an SMTP key (not an API key), the port is 587 or 2525, `MAIL_FROM` is a sender verified in Brevo, the daily limit of the free plan (about 300 emails) is not used up, and the spam folder.

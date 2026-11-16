@@ -33,3 +33,7 @@ build/
 .vscode/
 
 .env
+
+# Shared team SMTP settings: this file holds the real key and is NOT committed (GitHub blocks pushes with secrets).
+# Get the real .env.team from the team (password manager) and put it in the project root.
+.env.team

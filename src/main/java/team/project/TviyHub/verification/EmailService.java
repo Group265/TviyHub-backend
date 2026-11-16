@@ -27,6 +27,16 @@ public class EmailService {
 		this.from = from;
 	}
 
+	/** Tells at startup which mode is active, so it is clear why codes do or do not arrive. No secrets are logged. */
+	@jakarta.annotation.PostConstruct
+	void logMode() {
+		if (host.isBlank()) {
+			log.warn("Email: MAIL_HOST is empty, codes are only written to this log (see .env.team / README)");
+		} else {
+			log.info("Email: SMTP {}, from={}", host, from);
+		}
+	}
+
 	public void send(String to, String subject, String text) {
 		JavaMailSender sender = host.isBlank() ? null : mailSender.getIfAvailable();
 		if (sender == null) {

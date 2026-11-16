@@ -31,7 +31,9 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - .env
+      - path: .env.team
+        required: false
+      - path: .env
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysqldb:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
