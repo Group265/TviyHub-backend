@@ -55,3 +55,14 @@ Registration, password reset and profile changes send one-time codes by email. T
 If the SMTP key ever leaks, issue a new SMTP key in Brevo and update `.env.team` for everyone.
 
 If emails do not arrive, check: the key is an SMTP key (not an API key), the port is 587 or 2525, `MAIL_FROM` is a sender verified in Brevo, the daily limit of the free plan (about 300 emails) is not used up, and the spam folder.
+
+## Default administrator
+
+On startup, if the database has no administrator, one is created so the admin panel can be opened right away:
+
+* email `admin@admin.com`, password `12345678` (the log prints a warning while the default password is in use);
+* change them with `ADMIN_EMAIL` and `ADMIN_PASSWORD` in your `.env`, or turn the feature off with `ADMIN_BOOTSTRAP_ENABLED=false`;
+* if a user with that email already exists, they are made an administrator and keep their password;
+* nothing happens once an administrator exists, so the account is never recreated or overwritten.
+
+**These defaults are public, for development and testing only.** On any real server set your own `ADMIN_EMAIL` and `ADMIN_PASSWORD`, or change the password after the first login.
