@@ -16,11 +16,11 @@ import team.project.TviyHub.auth.dto.AuthResponse;
 import team.project.TviyHub.auth.dto.EmailRequest;
 import team.project.TviyHub.auth.dto.GoogleLoginRequest;
 import team.project.TviyHub.auth.dto.LoginRequest;
+import team.project.TviyHub.auth.dto.RegistrationPendingResponse;
 import team.project.TviyHub.auth.dto.ResetPasswordWithCodeRequest;
 import team.project.TviyHub.auth.dto.VerifyEmailRequest;
 import team.project.TviyHub.auth.dto.RegisterRequest;
 import team.project.TviyHub.auth.dto.RefreshTokenRequest;
-import team.project.TviyHub.user.dto.UserProfileResponse;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -31,13 +31,18 @@ public class AuthController {
 	private final AuthService authService;
 
 	@PostMapping("/register")
-	@ResponseStatus(HttpStatus.CREATED)
-	@Operation(summary = "Register a new user", description = "The role is always USER. The phone must be in international format.")
-	@ApiResponse(responseCode = "201", description = "User created")
+	@ResponseStatus(HttpStatus.ACCEPTED)
+	@Operation(summary = "Start a registration",
+			description = "The account is NOT created yet: a 6-digit code is emailed and the data waits for it. "
+					+ "Confirm with POST /api/auth/verify-email, which creates the account and signs the user in. "
+					+ "The role is always USER; the phone must be in international format. "
+					+ "Registering again with the same email replaces the earlier pending registration.")
+	@ApiResponse(responseCode = "202", description = "The code was emailed")
 	@ApiResponse(responseCode = "400", description = "Validation failed")
 	@ApiResponse(responseCode = "409", description = "Email or phone is already registered")
-	@ApiResponse(responseCode = "429", description = "Too many requests")
-	public UserProfileResponse register(@Valid @RequestBody RegisterRequest request) {
+	@ApiResponse(responseCode = "429", description = "Code was requested too recently, or too many requests")
+	@ApiResponse(responseCode = "503", description = "The email could not be sent")
+	public RegistrationPendingResponse register(@Valid @RequestBody RegisterRequest request) {
 		return authService.register(request);
 	}
 
@@ -86,24 +91,17 @@ public class AuthController {
 	}
 
 	@PostMapping("/verify-email")
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@Operation(summary = "Confirm the email with the code sent at registration",
-			description = "An unknown email gets the same 400 as a wrong code, so the response does not reveal whether the email is registered.")
-	@ApiResponse(responseCode = "204", description = "Email verified")
+	@Operation(summary = "Confirm the registration with the emailed code",
+			description = "Creates the account and returns the same tokens as login, so the user is signed in right away. "
+					+ "An unknown email gets the same 400 as a wrong code, so the response does not reveal whether the email is registered. "
+					+ "After 5 wrong codes the pending registration is deleted: register again.")
+	@ApiResponse(responseCode = "200", description = "Account created (or verified), tokens issued")
 	@ApiResponse(responseCode = "400", description = "Invalid or expired code, or validation failed")
+	@ApiResponse(responseCode = "403", description = "Account is blocked")
+	@ApiResponse(responseCode = "409", description = "The email or phone was taken while the code was pending")
 	@ApiResponse(responseCode = "429", description = "Too many requests")
-	public void verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
-		authService.verifyEmail(request);
-	}
-
-	@PostMapping("/resend-verification")
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@Operation(summary = "Send a new verification code", description = "Always returns 204, whether or not the email is registered.")
-	@ApiResponse(responseCode = "204", description = "Accepted")
-	@ApiResponse(responseCode = "400", description = "Validation failed")
-	@ApiResponse(responseCode = "429", description = "Code was requested too recently, or too many requests")
-	public void resendVerification(@Valid @RequestBody EmailRequest request) {
-		authService.resendVerification(request);
+	public AuthResponse verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+		return authService.verifyEmail(request);
 	}
 
 	@PostMapping("/forgot-password")

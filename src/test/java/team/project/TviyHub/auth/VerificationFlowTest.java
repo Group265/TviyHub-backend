@@ -11,6 +11,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import team.project.TviyHub.TestMailConfig;
+import team.project.TviyHub.verification.PendingRegistrationRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import team.project.TviyHub.user.Role;
+import team.project.TviyHub.user.User;
 import team.project.TviyHub.TestMailConfig.CapturingEmailService;
 import team.project.TviyHub.TestcontainersConfig;
 import team.project.TviyHub.user.UserRepository;
@@ -38,9 +42,16 @@ class VerificationFlowTest {
 	@Autowired
 	private CapturingEmailService mail;
 
+	@Autowired
+	private PendingRegistrationRepository pendingRepository;
+
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+
 	@BeforeEach
 	void setUp() throws Exception {
 		userRepository.deleteAll();
+		pendingRepository.deleteAll();
 		mail.reset();
 		register("Test User", "+380671234567", EMAIL);
 	}
@@ -50,8 +61,7 @@ class VerificationFlowTest {
 						.content("""
 								{"name":"%s","phone":"%s","email":"%s","password":"%s"}
 								""".formatted(name, phone, email, PASSWORD)))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.emailVerified").value(false));
+				.andExpect(status().isAccepted());
 	}
 
 	private ResultActions postJson(String path, String json) throws Exception {
@@ -63,9 +73,10 @@ class VerificationFlowTest {
 				.contentType(MediaType.APPLICATION_JSON).content(json));
 	}
 
-	private void verify(String email) throws Exception {
-		postJson("/api/auth/verify-email", "{\"email\":\"%s\",\"code\":\"%s\"}".formatted(email, mail.lastCode(email)))
-				.andExpect(status().isNoContent());
+	private String verify(String email) throws Exception {
+		String response = postJson("/api/auth/verify-email", "{\"email\":\"%s\",\"code\":\"%s\"}".formatted(email, mail.lastCode(email)))
+				.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+		return JsonPath.read(response, "$.accessToken");
 	}
 
 	private String login(String email, String password) throws Exception {
@@ -84,13 +95,11 @@ class VerificationFlowTest {
 	}
 
 	@Test
-	void registrationSendsCodeAndVerificationMarksEmailVerified() throws Exception {
+	void registrationSendsCodeAndVerificationCreatesVerifiedSignedInUser() throws Exception {
 		assertThat(mail.lastCode(EMAIL)).hasSize(6);
-		String token = login(EMAIL, PASSWORD);
-		mockMvc.perform(get("/api/users/me").header("Authorization", "Bearer " + token))
-				.andExpect(jsonPath("$.emailVerified").value(false));
+		assertThat(userRepository.count()).isZero();
 
-		verify(EMAIL);
+		String token = verify(EMAIL);
 
 		mockMvc.perform(get("/api/users/me").header("Authorization", "Bearer " + token))
 				.andExpect(jsonPath("$.emailVerified").value(true));
@@ -115,21 +124,29 @@ class VerificationFlowTest {
 		postJson("/api/auth/verify-email", "{\"email\":\"%s\",\"code\":\"%s\"}".formatted(EMAIL, good))
 				.andExpect(status().isBadRequest());
 
-		// a fresh code works again
-		postJson("/api/auth/resend-verification", "{\"email\":\"%s\"}".formatted(EMAIL)).andExpect(status().isNoContent());
+		// the pending registration is gone: registering again gives a fresh code
+		register("Test User", "+380671234567", EMAIL);
 		verify(EMAIL);
 	}
 
 	@Test
-	void resendAndForgotDoNotRevealWhetherEmailExists() throws Exception {
-		postJson("/api/auth/resend-verification", "{\"email\":\"nobody@b.com\"}").andExpect(status().isNoContent());
+	void forgotDoesNotRevealWhetherEmailExists() throws Exception {
 		postJson("/api/auth/forgot-password", "{\"email\":\"nobody@b.com\"}").andExpect(status().isNoContent());
 		assertThat(mail.sentCount("nobody@b.com")).isZero();
 	}
 
 	@Test
 	void unverifiedUserCannotStartSensitiveChanges() throws Exception {
-		String token = login(EMAIL, PASSWORD);
+		// an account registered before the code became mandatory
+		User legacy = new User();
+		legacy.setName("Legacy");
+		legacy.setPhone("+380500000001");
+		legacy.setEmail("legacy@b.com");
+		legacy.setPasswordHash(passwordEncoder.encode(PASSWORD));
+		legacy.setRole(Role.USER);
+		legacy.setEmailVerified(false);
+		userRepository.saveAndFlush(legacy);
+		String token = login("legacy@b.com", PASSWORD);
 		postAs(token, "/api/users/me/password/request",
 				"{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\"}").andExpect(status().isForbidden());
 		postAs(token, "/api/users/me/phone/request", "{\"newPhone\":\"+380991112233\"}").andExpect(status().isForbidden());
@@ -180,6 +197,7 @@ class VerificationFlowTest {
 	@Test
 	void rejectsPhoneUsedByAnotherUser() throws Exception {
 		register("Other", "+380991112233", "c@d.com");
+		verify("c@d.com");
 		String token = verifiedToken();
 		postAs(token, "/api/users/me/phone/request", "{\"newPhone\":\"+380991112233\"}").andExpect(status().isConflict());
 	}
@@ -203,6 +221,7 @@ class VerificationFlowTest {
 	@Test
 	void rejectsEmailChangeWithWrongPasswordOrTakenEmail() throws Exception {
 		register("Other", "+380991112233", "c@d.com");
+		verify("c@d.com");
 		String token = verifiedToken();
 		postAs(token, "/api/users/me/email/request",
 				"{\"newEmail\":\"x@b.com\",\"currentPassword\":\"wrong-password\"}").andExpect(status().isBadRequest());
@@ -214,6 +233,7 @@ class VerificationFlowTest {
 
 	@Test
 	void resetsForgottenPasswordWithCode() throws Exception {
+		verify(EMAIL);
 		postJson("/api/auth/forgot-password", "{\"email\":\"%s\"}".formatted(EMAIL)).andExpect(status().isNoContent());
 		String code = mail.lastCode(EMAIL);
 
