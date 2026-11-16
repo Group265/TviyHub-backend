@@ -1,0 +1,73 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-pending-registrations-table
+      author: tea
+      changes:
+        - createTable:
+            tableName: pending_registrations
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_pending_registrations_email
+
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: phone
+                  type: VARCHAR(16)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: password_hash
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: code_hash
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: attempts
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: expires_at
+                  type: DATETIME(6)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: created_at
+                  type: DATETIME(6)
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            tableName: pending_registrations
+            indexName: idx_pending_registrations_expires_at
+            columns:
+              - column:
+                  name: expires_at

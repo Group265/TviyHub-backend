@@ -11,7 +11,10 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import team.project.TviyHub.TestMailConfig;
+import team.project.TviyHub.TestMailConfig.CapturingEmailService;
 import team.project.TviyHub.TestcontainersConfig;
+import team.project.TviyHub.verification.PendingRegistrationRepository;
 import team.project.TviyHub.user.Role;
 import team.project.TviyHub.user.User;
 import team.project.TviyHub.user.UserRepository;
@@ -22,7 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Import(TestcontainersConfig.class)
+@Import({TestcontainersConfig.class, TestMailConfig.class})
 @SpringBootTest
 @AutoConfigureMockMvc
 class LoginAndProfileTest {
@@ -36,12 +39,27 @@ class LoginAndProfileTest {
 	@Autowired
 	private PasswordEncoder passwordEncoder;
 
+	@Autowired
+	private CapturingEmailService mail;
+
+	@Autowired
+	private PendingRegistrationRepository pendingRepository;
+
 	@BeforeEach
 	void cleanUp() throws Exception {
 		userRepository.deleteAll();
+		pendingRepository.deleteAll();
+		mail.reset();
+		registerConfirmed("Test User", "+380671234567", "a@b.com");
+	}
+
+	private void registerConfirmed(String name, String phone, String email) throws Exception {
 		mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-				{"name":"Test User","phone":"+380671234567","email":"a@b.com","password":"password123"}
-				""")).andExpect(status().isCreated());
+				{"name":"%s","phone":"%s","email":"%s","password":"password123"}
+				""".formatted(name, phone, email))).andExpect(status().isAccepted());
+		mockMvc.perform(post("/api/auth/verify-email").contentType(MediaType.APPLICATION_JSON)
+				.content("{\"email\":\"%s\",\"code\":\"%s\"}".formatted(email, mail.lastCode(email))))
+				.andExpect(status().isOk());
 	}
 
 	private String login(String email, String password) throws Exception {
@@ -77,9 +95,7 @@ class LoginAndProfileTest {
 
 	@Test
 	void locksLoginAfterRepeatedFailuresEvenWithCorrectPassword() throws Exception {
-		mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-				{"name":"Lock","phone":"+380991112299","email":"lock@b.com","password":"password123"}
-				""")).andExpect(status().isCreated());
+		registerConfirmed("Lock", "+380991112299", "lock@b.com");
 
 		for (int i = 0; i < 5; i++) {
 			mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
@@ -166,8 +182,11 @@ class LoginAndProfileTest {
 	void registrationIgnoresRequestedRole() throws Exception {
 		mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
 				{"name":"Sneaky","phone":"+380991112233","email":"s@b.com","password":"password123","role":"ADMIN"}
-				""")).andExpect(status().isCreated())
-				.andExpect(jsonPath("$.role").value("USER"));
+				""")).andExpect(status().isAccepted());
+		mockMvc.perform(post("/api/auth/verify-email").contentType(MediaType.APPLICATION_JSON)
+				.content("{\"email\":\"s@b.com\",\"code\":\"%s\"}".formatted(mail.lastCode("s@b.com"))))
+				.andExpect(status().isOk());
+		org.assertj.core.api.Assertions.assertThat(userRepository.findByEmail("s@b.com").orElseThrow().getRole()).isEqualTo(Role.USER);
 	}
 
 	@Test

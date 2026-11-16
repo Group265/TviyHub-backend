@@ -66,3 +66,11 @@ On startup, if the database has no administrator, one is created so the admin pa
 * nothing happens once an administrator exists, so the account is never recreated or overwritten.
 
 **These defaults are public, for development and testing only.** On any real server set your own `ADMIN_EMAIL` and `ADMIN_PASSWORD`, or change the password after the first login.
+
+## Registration with a mandatory email code
+
+1. `POST /api/auth/register` does **not** create the account. It stores the data, emails a 6-digit code and answers `202 {email, codeExpiresInSeconds}`.
+2. `POST /api/auth/verify-email` `{email, code}` creates the account (email already verified) and answers `200` with `accessToken` and `refreshToken`, so the user is signed in at once.
+3. After 5 wrong codes or 10 minutes the pending registration is dropped: register again.
+
+Until the code is confirmed there is no user, so login returns 401. Registering again with the same email replaces the pending registration.

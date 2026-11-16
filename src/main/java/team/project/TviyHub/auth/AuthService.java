@@ -8,9 +8,12 @@ import team.project.TviyHub.auth.dto.EmailRequest;
 import team.project.TviyHub.auth.dto.LoginRequest;
 import team.project.TviyHub.auth.google.GoogleIdTokenVerifier;
 import team.project.TviyHub.auth.google.GoogleProfile;
+import team.project.TviyHub.auth.dto.RegistrationPendingResponse;
 import team.project.TviyHub.auth.dto.ResetPasswordWithCodeRequest;
 import team.project.TviyHub.auth.dto.VerifyEmailRequest;
 import team.project.TviyHub.exception.BadRequestException;
+import team.project.TviyHub.verification.PendingRegistration;
+import team.project.TviyHub.verification.PendingRegistrationService;
 import team.project.TviyHub.verification.VerificationCodeService;
 import team.project.TviyHub.verification.VerificationPurpose;
 import team.project.TviyHub.auth.dto.RegisterRequest;
@@ -24,7 +27,6 @@ import team.project.TviyHub.security.LoginAttemptService;
 import team.project.TviyHub.user.Role;
 import team.project.TviyHub.user.User;
 import team.project.TviyHub.user.UserRepository;
-import team.project.TviyHub.user.dto.UserProfileResponse;
 
 import java.util.Locale;
 import java.util.Optional;
@@ -39,13 +41,15 @@ public class AuthService {
 	private final VerificationCodeService verificationCodeService;
 	private final RefreshTokenService refreshTokenService;
 	private final GoogleIdTokenVerifier googleIdTokenVerifier;
+	private final PendingRegistrationService pendingRegistrationService;
 	// Checked when the email is unknown, so that response time does not reveal whether it exists
 	private final String dummyPasswordHash;
 
 	public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
 					   JwtService jwtService, LoginAttemptService loginAttemptService,
 					   VerificationCodeService verificationCodeService, RefreshTokenService refreshTokenService,
-					   GoogleIdTokenVerifier googleIdTokenVerifier) {
+					   GoogleIdTokenVerifier googleIdTokenVerifier, PendingRegistrationService pendingRegistrationService) {
+		this.pendingRegistrationService = pendingRegistrationService;
 		this.googleIdTokenVerifier = googleIdTokenVerifier;
 		this.refreshTokenService = refreshTokenService;
 		this.verificationCodeService = verificationCodeService;
@@ -56,9 +60,13 @@ public class AuthService {
 		this.dummyPasswordHash = passwordEncoder.encode("timing-equalizer");
 	}
 
+	/**
+	 * Starts a registration: the data waits in a pending record and the account is created only when the
+	 * emailed code is confirmed (see {@link #verifyEmail}).
+	 */
 	@Transactional
-	public UserProfileResponse register(RegisterRequest request) {
-		String email = request.email().trim().toLowerCase(Locale.ROOT);
+	public RegistrationPendingResponse register(RegisterRequest request) {
+		String email = normalize(request.email());
 		String phone = request.phone().trim();
 
 		if (userRepository.existsByEmail(email)) {
@@ -68,36 +76,47 @@ public class AuthService {
 			throw new ConflictException("Phone is already registered");
 		}
 
-		User user = new User();
-		user.setName(request.name().trim());
-		user.setPhone(phone);
-		user.setEmail(email);
-		user.setPasswordHash(passwordEncoder.encode(request.password()));
-		user.setRole(Role.USER);
-		user.setEmailVerified(false);
-
-		User saved = userRepository.saveAndFlush(user);
-		verificationCodeService.issue(saved.getId(), VerificationPurpose.EMAIL_VERIFICATION, null, saved.getEmail());
-		return UserProfileResponse.from(saved);
+		pendingRegistrationService.start(request.name().trim(), phone, email, passwordEncoder.encode(request.password()));
+		return new RegistrationPendingResponse(email, pendingRegistrationService.codeTtlSeconds());
 	}
 
+	/**
+	 * Confirms the code. For a new registration this creates the account and signs the user in; accounts
+	 * registered before the code became mandatory are verified the old way and signed in as well.
+	 */
 	@Transactional
-	public void verifyEmail(VerifyEmailRequest request) {
-		User user = userRepository.findByEmail(normalize(request.email()))
+	public AuthResponse verifyEmail(VerifyEmailRequest request) {
+		String email = normalize(request.email());
+		if (pendingRegistrationService.exists(email)) {
+			PendingRegistration pending = pendingRegistrationService.confirm(email, request.code());
+			if (userRepository.existsByEmail(email)) {
+				throw new ConflictException("Email is already registered");
+			}
+			if (userRepository.existsByPhone(pending.getPhone())) {
+				throw new ConflictException("Phone is already registered");
+			}
+			User user = new User();
+			user.setName(pending.getName());
+			user.setPhone(pending.getPhone());
+			user.setEmail(email);
+			user.setPasswordHash(pending.getPasswordHash());
+			user.setRole(Role.USER);
+			user.setEmailVerified(true);
+			User saved = userRepository.saveAndFlush(user);
+			return tokens(saved, refreshTokenService.issue(saved.getId()));
+		}
+
+		User user = userRepository.findByEmail(email)
 				.orElseThrow(() -> new BadRequestException("Invalid or expired code"));
 		verificationCodeService.consume(user.getId(), VerificationPurpose.EMAIL_VERIFICATION, request.code());
+		if (user.isBlocked()) {
+			throw new ForbiddenException("Account is blocked");
+		}
 		user.setEmailVerified(true);
 		userRepository.saveAndFlush(user);
+		return tokens(user, refreshTokenService.issue(user.getId()));
 	}
 
-	/** Always completes silently, so the response does not reveal whether the email is registered. */
-	@Transactional
-	public void resendVerification(EmailRequest request) {
-		Optional<User> user = userRepository.findByEmail(normalize(request.email()));
-		if (user.isPresent() && !user.get().isEmailVerified() && !user.get().isBlocked()) {
-			verificationCodeService.issue(user.get().getId(), VerificationPurpose.EMAIL_VERIFICATION, null, user.get().getEmail());
-		}
-	}
 
 	/** Always completes silently, so the response does not reveal whether the email is registered. */
 	@Transactional

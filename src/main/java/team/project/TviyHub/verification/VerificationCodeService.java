@@ -95,6 +95,20 @@ public class VerificationCodeService {
 		return payload;
 	}
 
+	/** A random 6-digit code. */
+	public String generateCode() {
+		return "%06d".formatted(random.nextInt(1_000_000));
+	}
+
+	/** Emails a code for confirming a new registration, which has no user row yet. */
+	public void sendRegistrationCode(String recipientEmail, String code) {
+		emailService.send(recipientEmail, subject(VerificationPurpose.EMAIL_VERIFICATION), body(code));
+	}
+
+	public Duration getCodeTtl() {
+		return codeTtl;
+	}
+
 	private String subject(VerificationPurpose purpose) {
 		return switch (purpose) {
 			case EMAIL_VERIFICATION -> "TviyHub: confirm your email";
