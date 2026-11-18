@@ -48,7 +48,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
             @Param("date") LocalDate date
     );
 
-    @Query("SELECT s FROM Subscription s WHERE s.user.id = :userId")
+    @Query("SELECT s FROM Subscription s JOIN FETCH s.payment WHERE s.user.id = :userId")
     List<Subscription> getUserSubscriptions(@Param("userId") Long userId);
 
     List<Subscription> findByStatusAndCreatedAtBefore(
