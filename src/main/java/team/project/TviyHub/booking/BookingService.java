@@ -37,6 +37,13 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class BookingService {
+    private static final LocalTime HUB_OPEN_TIME = LocalTime.of(9, 0);
+    private static final LocalTime HUB_CLOSE_TIME = LocalTime.of(19, 0);
+    private static final long MIN_HOURLY_BOOKING_HOURS = 1;
+    private static final long MAX_HOURLY_BOOKING_HOURS = 4;
+    private static final long DAILY_CANCELLATION_HOURS_BEFORE = 24;
+    private static final long HOURLY_CANCELLATION_HOURS_BEFORE = 2;
+    private static final ZoneId KYIV_ZONE = ZoneId.of("Europe/Kyiv");
 
     private final BookingRepository bookingRepository;
     private final WorkspaceRepository workspaceRepository;
@@ -117,18 +124,23 @@ public class BookingService {
             }
 
             if (!isAdmin) {
-                if (start.isBefore(LocalTime.of(9, 0)) || end.isAfter(LocalTime.of(19, 0))) {
-                    throw new BadRequestException("Clients can only book between 09:00 and 19:00");
+                if (start.isBefore(HUB_OPEN_TIME) || end.isAfter(HUB_CLOSE_TIME)) {
+                    throw new BadRequestException(
+                            String.format("Clients can only book between %s and %s", HUB_OPEN_TIME, HUB_CLOSE_TIME)
+                    );
                 }
             }
 
             long hours = Duration.between(start, end).toHours();
-            if (hours < 1 || hours > 4) {
-                throw new BadRequestException("Hourly booking must be between 1 and 4 hours");
+            if (hours < MIN_HOURLY_BOOKING_HOURS || hours > MAX_HOURLY_BOOKING_HOURS) {
+                throw new BadRequestException(
+                        String.format("Hourly booking must be between %d and %d hours",
+                        MIN_HOURLY_BOOKING_HOURS, MAX_HOURLY_BOOKING_HOURS)
+                );
             }
         } else {
-            start = LocalTime.of(9, 0);
-            end = LocalTime.of(19, 0);
+            start = HUB_OPEN_TIME;
+            end = HUB_CLOSE_TIME;
         }
 
         List<Booking> bookingsToSave = new ArrayList<>();
@@ -203,13 +215,13 @@ public class BookingService {
                     .toList();
         }
 
-        LocalTime effectiveStart = (startTime != null) ? startTime : LocalTime.of(9, 0);
-        LocalTime effectiveEnd = (endTime != null) ? endTime : LocalTime.of(19, 0);
+        LocalTime effectiveStart = (startTime != null) ? startTime : HUB_OPEN_TIME;
+        LocalTime effectiveEnd = (endTime != null) ? endTime : HUB_CLOSE_TIME;
 
         if (!effectiveEnd.isAfter(effectiveStart)) {
             throw new BadRequestException("Invalid time slot: end time must be after start time");
         }
-        if (effectiveStart.isBefore(LocalTime.of(9, 0)) || effectiveEnd.isAfter(LocalTime.of(19, 0))) {
+        if (effectiveStart.isBefore(HUB_OPEN_TIME) || effectiveEnd.isAfter(HUB_CLOSE_TIME)) {
             return workspaceRepository.findAll().stream()
                     .map(w -> new WorkspaceAvailabilityDto(w.getId(), w.getName(), w.getType(), false))
                     .toList();
@@ -236,8 +248,8 @@ public class BookingService {
                             break;
                         }
 
-                        LocalTime existingStart = booking.getStartTime() != null ? booking.getStartTime() : LocalTime.of(9, 0);
-                        LocalTime existingEnd = booking.getEndTime() != null ? booking.getEndTime() : LocalTime.of(19, 0);
+                        LocalTime existingStart = booking.getStartTime() != null ? booking.getStartTime() : HUB_OPEN_TIME;
+                        LocalTime existingEnd = booking.getEndTime() != null ? booking.getEndTime() : HUB_CLOSE_TIME;
 
                         if (effectiveStart.isBefore(existingEnd) && effectiveEnd.isAfter(existingStart)) {
                             isAvailable = false;
@@ -282,8 +294,10 @@ public class BookingService {
             }
 
             hours = Duration.between(start, end).toHours();
-            if (hours < 1 || hours > 4) {
-                throw new BadRequestException("Hourly booking must be between 1 and 4 hours");
+            if (hours < MIN_HOURLY_BOOKING_HOURS || hours > MAX_HOURLY_BOOKING_HOURS) {
+                throw new BadRequestException(String.format("Hourly booking must be between %d and %d hours",
+                        MIN_HOURLY_BOOKING_HOURS, MAX_HOURLY_BOOKING_HOURS)
+                );
             }
         }
 
@@ -304,29 +318,25 @@ public class BookingService {
             throw new BadRequestException("Booking is already cancelled");
         }
 
+        LocalDateTime nowInKyiv = LocalDateTime.now(KYIV_ZONE);
+        LocalTime startTime = booking.getStartTime() != null ? booking.getStartTime() : HUB_OPEN_TIME;
+        LocalDateTime bookingStart = LocalDateTime.of(booking.getBookingDate(), startTime);
+
+        if (!nowInKyiv.isBefore(bookingStart)) {
+            throw new BadRequestException("Cannot cancel a booking that has already started or passed");
+        }
+
         if (currentUser.getRole() != Role.ADMIN) {
             if (!booking.getUser().getId().equals(currentUser.getId())) {
                 throw new ForbiddenException("You can only cancel your own bookings");
             }
 
-            ZoneId kyivZone = ZoneId.of("Europe/Kyiv");
-            LocalDateTime nowInKyiv = LocalDateTime.now(kyivZone);
-            LocalDate today = nowInKyiv.toLocalDate();
+            long requiredHoursBefore = (booking.getBookingType() == Tariff.BookingType.DAILY)
+                    ? DAILY_CANCELLATION_HOURS_BEFORE : HOURLY_CANCELLATION_HOURS_BEFORE;
 
-            if (booking.getBookingType() == Tariff.BookingType.DAILY) {
-                if (!today.isBefore(booking.getBookingDate())) {
-                    throw new BadRequestException("Daily bookings can only be cancelled at least 1 day in advance");
-                }
-            } else if (booking.getBookingType() == Tariff.BookingType.HOURLY) {
-                LocalDateTime bookingStart = LocalDateTime.of(booking.getBookingDate(), booking.getStartTime());
-
-                if (nowInKyiv.isAfter(bookingStart)) {
-                    throw new BadRequestException("Cannot cancel a past booking");
-                }
-
-                if (nowInKyiv.plusHours(2).isAfter(bookingStart)) {
-                    throw new BadRequestException("Hourly bookings can only be cancelled at least 2 hours before the start time");
-                }
+            if (nowInKyiv.plusHours(requiredHoursBefore).isAfter(bookingStart)) {
+                throw new BadRequestException(String.format("%s bookings can only be cancelled at least %d hours before the start time",
+                        booking.getBookingType(), requiredHoursBefore));
             }
         }
 
