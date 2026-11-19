@@ -109,7 +109,7 @@ class AccessTokenRevocationTest {
 
 		mockMvc.perform(post("/api/users/me/password/request").header("Authorization", "Bearer " + access)
 						.contentType(MediaType.APPLICATION_JSON)
-						.content("{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\"}"))
+						.content("{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\",\"confirmNewPassword\":\"newpassword456\"}"))
 				.andExpect(status().isNoContent());
 		mockMvc.perform(post("/api/users/me/password/confirm").header("Authorization", "Bearer " + access)
 						.contentType(MediaType.APPLICATION_JSON)
@@ -126,7 +126,7 @@ class AccessTokenRevocationTest {
 		String access = JsonPath.read(login(EMAIL, PASSWORD), "$.accessToken");
 
 		postJson("/api/auth/forgot-password", "{\"email\":\"%s\"}".formatted(EMAIL)).andExpect(status().isNoContent());
-		postJson("/api/auth/reset-password", "{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\"}"
+		postJson("/api/auth/reset-password", "{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\",\"confirmNewPassword\":\"brandnew789\"}"
 				.formatted(EMAIL, mail.lastCode(EMAIL))).andExpect(status().isNoContent());
 
 		me(access).andExpect(status().isUnauthorized());

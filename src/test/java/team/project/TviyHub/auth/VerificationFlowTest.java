@@ -59,8 +59,8 @@ class VerificationFlowTest {
 	private void register(String name, String phone, String email) throws Exception {
 		mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
 						.content("""
-								{"name":"%s","phone":"%s","email":"%s","password":"%s"}
-								""".formatted(name, phone, email, PASSWORD)))
+								{"name":"%s","phone":"%s","email":"%s","password":"%s","confirmPassword":"%s"}
+								""".formatted(name, phone, email, PASSWORD, PASSWORD)))
 				.andExpect(status().isAccepted());
 	}
 
@@ -148,7 +148,7 @@ class VerificationFlowTest {
 		userRepository.saveAndFlush(legacy);
 		String token = login("legacy@b.com", PASSWORD);
 		postAs(token, "/api/users/me/password/request",
-				"{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\"}").andExpect(status().isForbidden());
+				"{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\",\"confirmNewPassword\":\"newpassword456\"}").andExpect(status().isForbidden());
 		postAs(token, "/api/users/me/phone/request", "{\"newPhone\":\"+380991112233\"}").andExpect(status().isForbidden());
 		postAs(token, "/api/users/me/email/request",
 				"{\"newEmail\":\"n@b.com\",\"currentPassword\":\"password123\"}").andExpect(status().isForbidden());
@@ -158,7 +158,7 @@ class VerificationFlowTest {
 	void changesPasswordWithCode() throws Exception {
 		String token = verifiedToken();
 		postAs(token, "/api/users/me/password/request",
-				"{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\"}").andExpect(status().isNoContent());
+				"{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\",\"confirmNewPassword\":\"newpassword456\"}").andExpect(status().isNoContent());
 
 		// not applied before confirmation
 		login(EMAIL, PASSWORD);
@@ -177,9 +177,9 @@ class VerificationFlowTest {
 	void passwordChangeRequestChecksCurrentPasswordAndLength() throws Exception {
 		String token = verifiedToken();
 		postAs(token, "/api/users/me/password/request",
-				"{\"currentPassword\":\"wrong-password\",\"newPassword\":\"newpassword456\"}").andExpect(status().isBadRequest());
+				"{\"currentPassword\":\"wrong-password\",\"newPassword\":\"newpassword456\",\"confirmNewPassword\":\"newpassword456\"}").andExpect(status().isBadRequest());
 		postAs(token, "/api/users/me/password/request",
-				"{\"currentPassword\":\"password123\",\"newPassword\":\"short\"}").andExpect(status().isBadRequest());
+				"{\"currentPassword\":\"password123\",\"newPassword\":\"short\",\"confirmNewPassword\":\"short\"}").andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -237,9 +237,9 @@ class VerificationFlowTest {
 		postJson("/api/auth/forgot-password", "{\"email\":\"%s\"}".formatted(EMAIL)).andExpect(status().isNoContent());
 		String code = mail.lastCode(EMAIL);
 
-		postJson("/api/auth/reset-password", "{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\"}"
+		postJson("/api/auth/reset-password", "{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\",\"confirmNewPassword\":\"brandnew789\"}"
 				.formatted(EMAIL, wrongCode(EMAIL))).andExpect(status().isBadRequest());
-		postJson("/api/auth/reset-password", "{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\"}"
+		postJson("/api/auth/reset-password", "{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\",\"confirmNewPassword\":\"brandnew789\"}"
 				.formatted(EMAIL, code)).andExpect(status().isNoContent());
 
 		login(EMAIL, "brandnew789");

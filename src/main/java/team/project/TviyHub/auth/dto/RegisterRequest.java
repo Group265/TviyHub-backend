@@ -1,11 +1,13 @@
 package team.project.TviyHub.auth.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import team.project.TviyHub.validation.PasswordsMatch;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+@PasswordsMatch(password = "password", confirmation = "confirmPassword")
 public record RegisterRequest(
 		@Schema(description = "Full name", example = "Olena Shevchenko")
 		@NotBlank @Size(max = 100) String name,
@@ -14,6 +16,8 @@ public record RegisterRequest(
 		@Schema(description = "Email, stored in lower case; a verification code is sent to it", example = "olena@example.com")
 		@NotBlank @Email @Size(max = 255) String email,
 		@Schema(description = "Password, 8 to 72 characters", example = "StrongPass123")
-		@NotBlank @Size(min = 8, max = 72) String password
+		@NotBlank @Size(min = 8, max = 72) String password,
+		@Schema(description = "The password typed a second time; must be equal to password", example = "StrongPass123")
+		@NotBlank String confirmPassword
 ) {
 }

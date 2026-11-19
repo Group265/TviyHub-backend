@@ -172,13 +172,13 @@ class GoogleLoginTest {
 		// actions that need the current password are refused with a hint
 		mockMvc.perform(post("/api/users/me/password/request").header("Authorization", "Bearer " + access)
 						.contentType(MediaType.APPLICATION_JSON)
-						.content("{\"currentPassword\":\"whatever123\",\"newPassword\":\"newpassword456\"}"))
+						.content("{\"currentPassword\":\"whatever123\",\"newPassword\":\"newpassword456\",\"confirmNewPassword\":\"newpassword456\"}"))
 				.andExpect(status().isBadRequest());
 
 		mockMvc.perform(post("/api/auth/forgot-password").contentType(MediaType.APPLICATION_JSON)
 				.content("{\"email\":\"%s\"}".formatted(EMAIL))).andExpect(status().isNoContent());
 		mockMvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
-						.content("{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\"}"
+						.content("{\"email\":\"%s\",\"code\":\"%s\",\"newPassword\":\"brandnew789\",\"confirmNewPassword\":\"brandnew789\"}"
 								.formatted(EMAIL, mail.lastCode(EMAIL))))
 				.andExpect(status().isNoContent());
 		passwordLogin(EMAIL, "brandnew789").andExpect(status().isOk());

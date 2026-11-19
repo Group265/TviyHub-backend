@@ -51,8 +51,8 @@ class AuthControllerTest {
 
 	private static String body(String phone, String email, String password) {
 		return """
-				{"name":"Test User","phone":"%s","email":"%s","password":"%s"}
-				""".formatted(phone, email, password);
+				{"name":"Test User","phone":"%s","email":"%s","password":"%s","confirmPassword":"%s"}
+				""".formatted(phone, email, password, password);
 	}
 
 	private void register(String json, int expectedStatus) throws Exception {
