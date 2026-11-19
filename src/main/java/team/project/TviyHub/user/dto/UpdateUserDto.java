@@ -1,5 +1,6 @@
 package team.project.TviyHub.user.dto;
 
+import team.project.TviyHub.validation.PersonName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -9,7 +10,7 @@ import jakarta.validation.constraints.Size;
  * intentionally absent: phone, email and password are changed through the code-confirmed flows.
  */
 public record UpdateUserDto(
-		@Schema(description = "New name; omit to keep the current one", example = "Olena Kovalenko")
-		@Size(max = 100) @Pattern(regexp = ".*\\S.*", message = "must not be blank") String name
+		@Schema(description = "New name; omit to keep the current one. Only English, Ukrainian or Russian letters; words may be separated by a space, hyphen or apostrophe", example = "Olena Kovalenko")
+		@Size(max = 100) @Pattern(regexp = ".*\\S.*", message = "must not be blank") @Pattern(regexp = PersonName.REGEX, message = PersonName.MESSAGE) String name
 ) {
 }
