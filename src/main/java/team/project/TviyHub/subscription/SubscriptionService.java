@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import team.project.TviyHub.booking.Booking;
 import team.project.TviyHub.booking.BookingRepository;
+import team.project.TviyHub.exception.BadRequestException;
 import team.project.TviyHub.exception.ConflictException;
 import team.project.TviyHub.exception.ResourceNotFoundException;
 import team.project.TviyHub.payment.Payment;
@@ -18,11 +19,15 @@ import team.project.TviyHub.workspace.WorkspaceRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class SubscriptionService {
+    private static final BigDecimal MONTHLY_SUBSCRIPTION_PRICE = BigDecimal.valueOf(3500.00);
+    private static final int SUBSCRIPTION_DURATION_MONTHS = 1;
+    private static final ZoneId KYIV_ZONE = ZoneId.of("Europe/Kyiv");
 
     private final SubscriptionRepository subscriptionRepository;
     private final WorkspaceRepository workspaceRepository;
@@ -44,7 +49,7 @@ public class SubscriptionService {
         }
 
         LocalDate startDate = request.startDate();
-        LocalDate endDate = startDate.plusMonths(1).minusDays(1);
+        LocalDate endDate = startDate.plusMonths(SUBSCRIPTION_DURATION_MONTHS).minusDays(1);
 
         List<Subscription> overlaps = subscriptionRepository.findOverlappingSubscriptionsInPeriod(
                 workspace.getId(),
@@ -62,7 +67,7 @@ public class SubscriptionService {
 
         Payment pendingPayment = Payment.builder()
                 .status(Payment.PaymentStatus.UNPAID)
-                .amount(BigDecimal.valueOf(3500.00))
+                .amount(MONTHLY_SUBSCRIPTION_PRICE)
                 .build();
 
         Subscription subscription = subscriptionMapper.toEntity(request);
@@ -98,7 +103,7 @@ public class SubscriptionService {
 
         subscription.setStatus(Subscription.SubscriptionStatus.ACTIVE);
         subscription.getPayment().setStatus(Payment.PaymentStatus.PAID);
-        subscription.getPayment().setPaidAt(LocalDateTime.now());
+        subscription.getPayment().setPaidAt(LocalDateTime.now(KYIV_ZONE));
 
         return subscriptionRepository.save(subscription);
     }
@@ -107,6 +112,19 @@ public class SubscriptionService {
     public Subscription cancelSubscription(Long id) {
         Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + id));
+
+        if (subscription.getStatus() == Subscription.SubscriptionStatus.CANCELLED) {
+            throw new BadRequestException("Subscription is already cancelled");
+        }
+
+        if (subscription.getStatus() == Subscription.SubscriptionStatus.EXPIRED) {
+            throw new BadRequestException("Cannot cancel an expired subscription");
+        }
+
+        LocalDate today = LocalDate.now(KYIV_ZONE);
+        if (today.isAfter(subscription.getEndDate())) {
+            throw new BadRequestException("Cannot cancel a subscription that has already ended");
+        }
 
         subscription.setStatus(Subscription.SubscriptionStatus.CANCELLED);
         if (subscription.getPayment().getStatus() == Payment.PaymentStatus.PAID) {
