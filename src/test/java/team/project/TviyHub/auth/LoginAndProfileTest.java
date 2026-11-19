@@ -55,7 +55,7 @@ class LoginAndProfileTest {
 
 	private void registerConfirmed(String name, String phone, String email) throws Exception {
 		mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-				{"name":"%s","phone":"%s","email":"%s","password":"password123"}
+				{"name":"%s","phone":"%s","email":"%s","password":"password123","confirmPassword":"password123"}
 				""".formatted(name, phone, email))).andExpect(status().isAccepted());
 		mockMvc.perform(post("/api/auth/verify-email").contentType(MediaType.APPLICATION_JSON)
 				.content("{\"email\":\"%s\",\"code\":\"%s\"}".formatted(email, mail.lastCode(email))))
@@ -181,7 +181,7 @@ class LoginAndProfileTest {
 	@Test
 	void registrationIgnoresRequestedRole() throws Exception {
 		mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-				{"name":"Sneaky","phone":"+380991112233","email":"s@b.com","password":"password123","role":"ADMIN"}
+				{"name":"Sneaky","phone":"+380991112233","email":"s@b.com","password":"password123","confirmPassword":"password123","role":"ADMIN"}
 				""")).andExpect(status().isAccepted());
 		mockMvc.perform(post("/api/auth/verify-email").contentType(MediaType.APPLICATION_JSON)
 				.content("{\"email\":\"s@b.com\",\"code\":\"%s\"}".formatted(mail.lastCode("s@b.com"))))
