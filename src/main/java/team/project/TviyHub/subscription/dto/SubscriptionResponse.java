@@ -13,6 +13,8 @@ public record SubscriptionResponse(
         LocalDate startDate,
         LocalDate endDate,
         Subscription.SubscriptionStatus status,
+        Long paymentId,
         Payment.PaymentStatus paymentStatus,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime paymentDeadline
 ) {}
