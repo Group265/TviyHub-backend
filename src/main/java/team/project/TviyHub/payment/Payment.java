@@ -54,7 +54,7 @@ public class Payment {
     @Column(name = "payment_method", nullable = false, length = 20)
     private PaymentMethod paymentMethod = PaymentMethod.CASH;
 
-    @Column(name = "external_transaction_id", unique = true, length = 100)
+    @Column(name = "external_transaction_id", length = 100)
     private String externalTransactionId;
 
     public enum PaymentStatus {
