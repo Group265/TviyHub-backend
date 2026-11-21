@@ -64,6 +64,7 @@ public class SecurityConfig {
 						.accessDeniedHandler(securityHandler))
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/webhooks/stripe").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/workspaces/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/tariffs/**").permitAll()

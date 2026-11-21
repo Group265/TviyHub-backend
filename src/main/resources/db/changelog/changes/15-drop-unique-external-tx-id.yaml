@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 15-drop-unique-external-tx-id
+      author: acidden
+      changes:
+        - dropUniqueConstraint:
+            tableName: payments
+            constraintName: external_transaction_id
+        - createIndex:
+            tableName: payments
+            indexName: idx_payments_external_tx_id
+            columns:
+              - column:
+                  name: external_transaction_id
