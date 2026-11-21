@@ -193,7 +193,7 @@ public class BookingService {
             booking.setStartTime(start);
             booking.setEndTime(end);
             booking.setTotalPrice(totalPrice);
-            booking.setStatus(Booking.BookingStatus.CONFIRMED);
+            booking.setStatus(Booking.BookingStatus.PENDING_PAYMENT);
             booking.setPayment(initialPayment);
 
             bookingsToSave.add(booking);
@@ -228,7 +228,8 @@ public class BookingService {
         }
 
         List<Workspace> allWorkspaces = workspaceRepository.findAll();
-        List<Booking> activeBookings = bookingRepository.findByBookingDateAndStatus(date, Booking.BookingStatus.CONFIRMED);
+        List<Booking> activeBookings = bookingRepository.findByBookingDateAndStatusIn(date,
+                List.of(Booking.BookingStatus.CONFIRMED, Booking.BookingStatus.PENDING_PAYMENT));
 
         return allWorkspaces.stream().map(workspace -> {
             boolean isAvailable = true;
