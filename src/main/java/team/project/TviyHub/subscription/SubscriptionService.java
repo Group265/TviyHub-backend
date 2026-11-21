@@ -79,7 +79,7 @@ public class SubscriptionService {
         subscription.setPayment(pendingPayment);
         pendingPayment.setSubscription(subscription);
 
-        return subscriptionRepository.save(subscription);
+        return subscriptionRepository.saveAndFlush(subscription);
     }
 
     @Transactional(readOnly = true)
@@ -93,7 +93,7 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public Subscription confirmPayment(Long id) {
+    public Subscription confirmPayment(Long id, Payment.PaymentMethod paymentMethod) {
         Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + id));
 
@@ -103,6 +103,7 @@ public class SubscriptionService {
 
         subscription.setStatus(Subscription.SubscriptionStatus.ACTIVE);
         subscription.getPayment().setStatus(Payment.PaymentStatus.PAID);
+        subscription.getPayment().setPaymentMethod(paymentMethod != null ? paymentMethod : Payment.PaymentMethod.CASH);
         subscription.getPayment().setPaidAt(LocalDateTime.now(KYIV_ZONE));
 
         return subscriptionRepository.save(subscription);

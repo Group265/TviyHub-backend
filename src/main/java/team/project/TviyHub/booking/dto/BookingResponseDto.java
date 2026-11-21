@@ -2,6 +2,7 @@ package team.project.TviyHub.booking.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import team.project.TviyHub.booking.Booking;
 import team.project.TviyHub.tariff.Tariff;
@@ -17,5 +18,8 @@ public record BookingResponseDto(
         LocalTime endTime,
         BigDecimal totalPrice,
         Booking.BookingStatus status,
-        String paymentStatus
+        Long paymentId,
+        String paymentStatus,
+        LocalDateTime createdAt,
+        LocalDateTime paymentDeadline
 ) {}

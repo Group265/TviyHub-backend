@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class SubscriptionScheduler {
+    private static final LocalTime HUB_CLOSE_TIME = LocalTime.of(19, 0);
 
     private final SubscriptionRepository subscriptionRepository;
 
@@ -24,24 +26,25 @@ public class SubscriptionScheduler {
     public void cancelUnpaidSubscriptions() {
         log.info("Starting background process to clean up unpaid subscriptions...");
 
-        ZonedDateTime kyivTime = ZonedDateTime.now(ZoneId.of("Europe/Kyiv")).minusHours(24);
-        LocalDateTime thresholdTime = kyivTime.toLocalDateTime();
+        LocalDateTime nowInKyiv = LocalDateTime.now(ZoneId.of("Europe/Kyiv"));
 
-        List<Subscription> expiredSubscriptions = subscriptionRepository
-                .findByStatusAndCreatedAtBefore(Subscription.SubscriptionStatus.PENDING_PAYMENT, thresholdTime);
+        List<Subscription> pendingSubscriptions = subscriptionRepository
+                .findByStatus(Subscription.SubscriptionStatus.PENDING_PAYMENT);
 
-        if (expiredSubscriptions.isEmpty()) {
-            log.info("No unpaid subscriptions older than 24 hours found.");
-            return;
+        int cancelledCount = 0;
+        for (Subscription sub : pendingSubscriptions) {
+            LocalDateTime plus24Hours = sub.getCreatedAt().plusHours(24);
+            LocalDateTime startDayClose = sub.getStartDate().atTime(HUB_CLOSE_TIME);
+            LocalDateTime deadline = plus24Hours.isBefore(startDayClose) ? plus24Hours : startDayClose;
+
+            if (!nowInKyiv.isBefore(deadline)) {
+                sub.setStatus(Subscription.SubscriptionStatus.CANCELLED);
+                cancelledCount++;
+                log.info("Subscription ID {} automatically cancelled (deadline was {}). Workspace ID {} is now available.",
+                        sub.getId(), deadline, sub.getWorkspace().getId());
+            }
         }
-
-        for (Subscription sub : expiredSubscriptions) {
-            sub.setStatus(Subscription.SubscriptionStatus.CANCELLED);
-            log.info("Subscription ID {} automatically cancelled (payment timeout). Workspace ID {} is now available.",
-                    sub.getId(), sub.getWorkspace().getId());
-        }
-
-        log.info("Cleanup process finished successfully. Automatically cancelled subscriptions count: {}", expiredSubscriptions.size());
+        log.info("Cleanup process finished. Automatically cancelled subscriptions count: {}", cancelledCount);
     }
 
     @Scheduled(cron = "0 1 0 * * *")

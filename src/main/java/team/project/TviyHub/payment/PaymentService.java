@@ -268,8 +268,12 @@ public class PaymentService {
         }
 
         if (payment.getSubscription() != null) {
-            ZonedDateTime createdPlus24h = payment.getSubscription().getCreatedAt().plusHours(24).atZone(KYIV_ZONE);
-            long deadlineEpoch = createdPlus24h.toEpochSecond();
+            Subscription sub = payment.getSubscription();
+            ZonedDateTime createdPlus24h = sub.getCreatedAt().plusHours(24).atZone(KYIV_ZONE);
+            ZonedDateTime startDayClose = sub.getStartDate().atTime(19, 0).atZone(KYIV_ZONE);
+
+            ZonedDateTime deadline = createdPlus24h.isBefore(startDayClose) ? createdPlus24h : startDayClose;
+            long deadlineEpoch = deadline.toEpochSecond();
             return Math.max(minExpiresAt, Math.min(deadlineEpoch, maxExpiresAt));
         }
 

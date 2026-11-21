@@ -4,12 +4,20 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import team.project.TviyHub.payment.Payment;
 import team.project.TviyHub.subscription.dto.SubscriptionRequest;
 import team.project.TviyHub.subscription.dto.SubscriptionResponse;
 
@@ -36,7 +44,7 @@ public class SubscriptionController {
     public ResponseEntity<SubscriptionResponse> create(
             @Valid @RequestBody SubscriptionRequest request,
             @AuthenticationPrincipal(expression = "id") Long userId
-            ) {
+    ) {
         Subscription subscription = subscriptionService.createSubscription(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(subscriptionMapper.toDto(subscription));
@@ -76,8 +84,11 @@ public class SubscriptionController {
             summary = "Confirm payment (Admin)",
             description = "Manually confirm that the client has paid for the subscription. Changes status to ACTIVE. Restricted to administrators."
     )
-    public ResponseEntity<SubscriptionResponse> confirmPayment(@PathVariable Long id) {
-        Subscription subscription = subscriptionService.confirmPayment(id);
+    public ResponseEntity<SubscriptionResponse> confirmPayment(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "CASH") Payment.PaymentMethod paymentMethod
+    ) {
+        Subscription subscription = subscriptionService.confirmPayment(id, paymentMethod);
         return ResponseEntity.ok(subscriptionMapper.toDto(subscription));
     }
 
