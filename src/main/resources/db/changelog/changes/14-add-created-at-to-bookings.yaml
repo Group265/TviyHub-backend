@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 14-add-created-at-to-bookings
+      author: acidden
+      changes:
+        - addColumn:
+            tableName: bookings
+            columns:
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false

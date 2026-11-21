@@ -25,3 +25,6 @@ databaseChangeLog:
       file: db/changelog/changes/12-add-google-login-to-users.yaml
   - include:
       file: db/changelog/changes/13-create-pending-registrations-table.yaml
+  - include:
+      file: db/changelog/changes/14-add-created-at-to-bookings.yaml
+

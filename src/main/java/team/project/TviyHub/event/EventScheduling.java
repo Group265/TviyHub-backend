@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 /**
  * Rules for when an event can take place. Only reads the booking and closed-day data of other
@@ -60,8 +61,9 @@ public class EventScheduling {
 		if (closedDayService.isDateClosed(date)) {
 			throw new ConflictException("The hub is closed on " + date);
 		}
-		if (!bookingRepository.findByBookingDateAndStatus(date, Booking.BookingStatus.CONFIRMED).isEmpty()) {
-			throw new ConflictException("There are confirmed bookings on " + date);
+		if (!bookingRepository.findByBookingDateAndStatusIn(date,
+                List.of(Booking.BookingStatus.CONFIRMED, Booking.BookingStatus.PENDING_PAYMENT)).isEmpty()) {
+			throw new ConflictException("There are active bookings on " + date);
 		}
 	}
 }
