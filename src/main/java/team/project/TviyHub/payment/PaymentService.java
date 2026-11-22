@@ -73,14 +73,7 @@ public class PaymentService {
 
         long stripeAmount = payment.getAmount().multiply(new BigDecimal(100)).longValue();
 
-        String productName;
-        if (payment.getBooking() != null) {
-            productName = "Booking: " + payment.getBooking().getWorkspace().getName();
-        } else if (payment.getSubscription() != null) {
-            productName = "Subscription: " + payment.getSubscription().getWorkspace().getName();
-        } else {
-            productName = "Hub service payment #" + payment.getId();
-        }
+        String productName = buildProductName(payment);
 
         try {
             SessionCreateParams params = SessionCreateParams.builder()
@@ -187,7 +180,10 @@ public class PaymentService {
     private String buildProductName(Payment payment) {
         if (payment.getBooking() != null) {
             Booking b = payment.getBooking();
-            return "Booking: " + b.getWorkspace().getName() + " (" + b.getBookingDate() + ")";
+            String timeRange = (b.getStartTime() != null && b.getEndTime() != null)
+                    ? ", " + b.getStartTime() + "-" + b.getEndTime()
+                    : "";
+            return "Booking: " + b.getWorkspace().getName() + " (" + b.getBookingDate() + timeRange + ")";
         } else if (payment.getSubscription() != null) {
             return "Subscription: " + payment.getSubscription().getWorkspace().getName();
         }
@@ -279,7 +275,6 @@ public class PaymentService {
         return maxExpiresAt;
     }
 
-
     private Payment updatePaymentFields(Payment payment, Payment.PaymentStatus status, Payment.PaymentMethod method) {
         payment.setStatus(status);
         payment.setPaymentMethod(method);
@@ -345,5 +340,4 @@ public class PaymentService {
             }
         }
     }
-
 }
