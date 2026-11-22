@@ -19,11 +19,11 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-        SELECT s FROM Subscription s 
-        WHERE s.workspace.id = :workspaceId 
-        AND :date BETWEEN s.startDate AND s.endDate
-        AND s.status IN ('ACTIVE', 'PENDING_PAYMENT')
-    """)
+                SELECT s FROM Subscription s 
+                WHERE s.workspace.id = :workspaceId 
+                AND :date BETWEEN s.startDate AND s.endDate
+                AND s.status IN ('ACTIVE', 'PENDING_PAYMENT')
+            """)
     List<Subscription> findOverlappingSubscriptions(
             @Param("workspaceId") Long workspaceId,
             @Param("date") LocalDate date
@@ -31,11 +31,11 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-        SELECT s FROM Subscription s 
-        WHERE s.workspace.id = :workspaceId 
-          AND s.status IN ('ACTIVE', 'PENDING_PAYMENT')
-          AND (:startDate <= s.endDate AND :endDate >= s.startDate)
-    """)
+                SELECT s FROM Subscription s 
+                WHERE s.workspace.id = :workspaceId 
+                  AND s.status IN ('ACTIVE', 'PENDING_PAYMENT')
+                  AND (:startDate <= s.endDate AND :endDate >= s.startDate)
+            """)
     List<Subscription> findOverlappingSubscriptionsInPeriod(
             @Param("workspaceId") Long workspaceId,
             @Param("startDate") LocalDate startDate,
@@ -43,11 +43,11 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     );
 
     @Query("""
-        SELECT s FROM Subscription s 
-        WHERE s.workspace.id = :workspaceId 
-        AND :date BETWEEN s.startDate AND s.endDate
-        AND s.status IN ('ACTIVE', 'PENDING_PAYMENT')
-    """)
+                SELECT s FROM Subscription s 
+                WHERE s.workspace.id = :workspaceId 
+                AND :date BETWEEN s.startDate AND s.endDate
+                AND s.status IN ('ACTIVE', 'PENDING_PAYMENT')
+            """)
     List<Subscription> findOverlappingSubscriptionsForRead(
             @Param("workspaceId") Long workspaceId,
             @Param("date") LocalDate date
@@ -59,6 +59,17 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     List<Subscription> findByStatusAndCreatedAtBefore(
             Subscription.SubscriptionStatus status,
             LocalDateTime dateTime
+    );
+
+    @Query("""
+                SELECT COUNT(s) > 0 FROM Subscription s
+                WHERE s.workspace.id = :workspaceId
+                AND s.endDate >= :today
+                AND s.status IN ('ACTIVE', 'PENDING_PAYMENT')
+            """)
+    boolean existsActiveSubscriptions(
+            @Param("workspaceId") Long workspaceId,
+            @Param("today") LocalDate today
     );
 
     List<Subscription> findByStatus(Subscription.SubscriptionStatus status);

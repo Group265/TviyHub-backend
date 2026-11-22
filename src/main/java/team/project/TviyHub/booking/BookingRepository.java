@@ -32,16 +32,28 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-        SELECT b FROM Booking b 
-        WHERE b.workspace.id = :workspaceId 
-        AND b.bookingDate BETWEEN :startDate AND :endDate 
-        AND b.status IN ('CONFIRMED', 'PENDING_PAYMENT')
+            SELECT b FROM Booking b 
+            WHERE b.workspace.id = :workspaceId 
+            AND b.bookingDate BETWEEN :startDate AND :endDate 
+            AND b.status IN ('CONFIRMED', 'PENDING_PAYMENT')
     """)
     List<Booking> existsActiveBookingsInPeriod(
             @Param("workspaceId") Long workspaceId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    @Query("""
+            SELECT COUNT(b) > 0 FROM Booking b
+            WHERE b.workspace.id = :workspaceId
+            AND b.bookingDate >= :today
+            AND b.status IN ('CONFIRMED', 'PENDING_PAYMENT')
+    """)
+    boolean existsFutureActiveBookings(
+            @Param("workspaceId") Long workspaceId,
+            @Param("today") LocalDate today
+    );
+
 
     @Query("""
             SELECT b FROM Booking b JOIN FETCH b.payment p 
