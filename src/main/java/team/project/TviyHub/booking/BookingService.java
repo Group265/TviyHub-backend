@@ -344,7 +344,7 @@ public class BookingService {
         booking.setStatus(Booking.BookingStatus.CANCELLED);
 
         if (booking.getPayment() != null && Payment.PaymentStatus.PAID.equals(booking.getPayment().getStatus())) {
-            booking.getPayment().setStatus(Payment.PaymentStatus.REFUNDED);
+            booking.getPayment().setStatus(Payment.PaymentStatus.REFUND_PENDING);
         }
 
         Booking saved = bookingRepository.save(booking);
