@@ -75,9 +75,9 @@ public class PaymentService {
 
         String productName;
         if (payment.getBooking() != null) {
-            productName = "Booking workspace #" + payment.getBooking().getId();
+            productName = "Booking: " + payment.getBooking().getWorkspace().getName();
         } else if (payment.getSubscription() != null) {
-            productName = "Subscription workspace #" + payment.getSubscription().getId();
+            productName = "Subscription: " + payment.getSubscription().getWorkspace().getName();
         } else {
             productName = "Hub service payment #" + payment.getId();
         }
@@ -187,13 +187,12 @@ public class PaymentService {
     private String buildProductName(Payment payment) {
         if (payment.getBooking() != null) {
             Booking b = payment.getBooking();
-            return "Booking workspace #" + b.getId() + " (" + b.getBookingDate() + ")";
+            return "Booking: " + b.getWorkspace().getName() + " (" + b.getBookingDate() + ")";
         } else if (payment.getSubscription() != null) {
-            return "Subscription workspace #" + payment.getSubscription().getId();
+            return "Subscription: " + payment.getSubscription().getWorkspace().getName();
         }
         return "Hub service payment #" + payment.getId();
     }
-
 
     @Transactional
     public List<Payment> verifyStripePayment(String sessionId) {
