@@ -73,8 +73,6 @@ public class PaymentService {
 
         long stripeAmount = payment.getAmount().multiply(new BigDecimal(100)).longValue();
 
-        String productName = buildProductName(payment);
-
         try {
             SessionCreateParams params = SessionCreateParams.builder()
                     .setMode(SessionCreateParams.Mode.PAYMENT)
@@ -91,7 +89,8 @@ public class PaymentService {
                                                     .setUnitAmount(stripeAmount)
                                                     .setProductData(
                                                             SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                                                    .setName(productName)
+                                                                    .setName(buildProductName(payment))
+                                                                    .setDescription(buildProductDescription(payment))
                                                                     .build()
                                                     )
                                                     .build()
@@ -143,7 +142,6 @@ public class PaymentService {
 
         for (Payment payment : payments) {
             long stripeAmount = payment.getAmount().multiply(new BigDecimal(100)).longValue();
-            String itemName = buildProductName(payment);
 
             paramsBuilder.addLineItem(
                     SessionCreateParams.LineItem.builder()
@@ -154,7 +152,8 @@ public class PaymentService {
                                             .setUnitAmount(stripeAmount)
                                             .setProductData(
                                                     SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                                            .setName(itemName)
+                                                            .setName(buildProductName(payment))
+                                                            .setDescription(buildProductDescription(payment))
                                                             .build()
                                             )
                                             .build()
@@ -178,16 +177,26 @@ public class PaymentService {
     }
 
     private String buildProductName(Payment payment) {
+        if (payment.getBooking() != null && payment.getBooking().getWorkspace() != null) {
+            return payment.getBooking().getWorkspace().getName();
+        } else if (payment.getSubscription() != null && payment.getSubscription().getWorkspace() != null) {
+            return payment.getSubscription().getWorkspace().getName();
+        }
+        return "Оплата послуг хабу #" + payment.getId();
+    }
+
+    private String buildProductDescription(Payment payment) {
         if (payment.getBooking() != null) {
             Booking b = payment.getBooking();
             String timeRange = (b.getStartTime() != null && b.getEndTime() != null)
-                    ? ", " + b.getStartTime() + "-" + b.getEndTime()
+                    ? ", " + b.getStartTime() + "–" + b.getEndTime()
                     : "";
-            return "Booking: " + b.getWorkspace().getName() + " (" + b.getBookingDate() + timeRange + ")";
+            return "Бронювання • " + b.getBookingDate() + timeRange;
         } else if (payment.getSubscription() != null) {
-            return "Subscription: " + payment.getSubscription().getWorkspace().getName();
+            Subscription s = payment.getSubscription();
+            return "Абонемент • з " + s.getStartDate() + " до " + s.getEndDate();
         }
-        return "Hub service payment #" + payment.getId();
+        return null;
     }
 
     @Transactional
