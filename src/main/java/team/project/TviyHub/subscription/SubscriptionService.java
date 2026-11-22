@@ -8,6 +8,7 @@ import team.project.TviyHub.booking.Booking;
 import team.project.TviyHub.booking.BookingRepository;
 import team.project.TviyHub.exception.BadRequestException;
 import team.project.TviyHub.exception.ConflictException;
+import team.project.TviyHub.exception.ForbiddenException;
 import team.project.TviyHub.exception.ResourceNotFoundException;
 import team.project.TviyHub.payment.Payment;
 import team.project.TviyHub.subscription.dto.SubscriptionRequest;
@@ -21,6 +22,7 @@ import team.project.TviyHub.workspace.WorkspaceRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -117,10 +119,32 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public Subscription cancelSubscription(Long id) {
+    public Subscription cancelUserSubscription(Long id, Long userId) {
         Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + id));
 
+        if (!subscription.getUser().getId().equals(userId)) {
+            throw new ForbiddenException("You can only cancel your own subscriptions");
+        }
+
+        LocalDateTime nowInKyiv = LocalDateTime.now(KYIV_ZONE);
+        LocalDateTime subscriptionStart = subscription.getStartDate().atTime(LocalTime.of(9, 0));
+
+        if (nowInKyiv.plusHours(24).isAfter(subscriptionStart)) {
+            throw new BadRequestException("Subscriptions can only be cancelled by client at least 24 hours before the start time");
+        }
+
+        return performCancellation(subscription);
+    }
+
+    @Transactional
+    public Subscription cancelSubscription(Long id) {
+        Subscription subscription = subscriptionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + id));
+        return performCancellation(subscription);
+    }
+
+    private Subscription performCancellation(Subscription subscription) {
         if (subscription.getStatus() == Subscription.SubscriptionStatus.CANCELLED) {
             throw new BadRequestException("Subscription is already cancelled");
         }
@@ -135,8 +159,8 @@ public class SubscriptionService {
         }
 
         subscription.setStatus(Subscription.SubscriptionStatus.CANCELLED);
-        if (subscription.getPayment().getStatus() == Payment.PaymentStatus.PAID) {
-            subscription.getPayment().setStatus(Payment.PaymentStatus.REFUNDED);
+        if (subscription.getPayment() != null && subscription.getPayment().getStatus() == Payment.PaymentStatus.PAID) {
+            subscription.getPayment().setStatus(Payment.PaymentStatus.REFUND_PENDING);
         }
         return subscriptionRepository.save(subscription);
     }

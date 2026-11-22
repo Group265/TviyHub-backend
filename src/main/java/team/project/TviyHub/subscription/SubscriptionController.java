@@ -10,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -96,7 +97,7 @@ public class SubscriptionController {
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(
             summary = "Cancel subscription (Admin)",
-            description = "Manually cancel an active or pending subscription. Changes payment status to REFUNDED if it was paid. Restricted to administrators."
+            description = "Manually cancel an active, pending or already started subscription. Changes payment status to REFUND_PENDING if it was paid. Restricted to administrators."
     )
     public ResponseEntity<SubscriptionResponse> cancel(@PathVariable Long id) {
         Subscription subscription = subscriptionService.cancelSubscription(id);
@@ -114,6 +115,20 @@ public class SubscriptionController {
             @RequestParam int days
     ) {
         Subscription subscription = subscriptionService.extendSubscription(id, days);
+        return ResponseEntity.ok(subscriptionMapper.toDto(subscription));
+    }
+
+    @PatchMapping("/subscriptions/{id}/cancel")
+    @PreAuthorize("hasRole('USER')")
+    @Operation(
+            summary = "Cancel own subscription (User)",
+            description = "Allows a client to cancel their own subscription at least 24 hours before its start date."
+    )
+    public ResponseEntity<SubscriptionResponse> cancelMySubscription(
+            @PathVariable Long id,
+            @AuthenticationPrincipal(expression = "id") Long userId
+    ) {
+        Subscription subscription = subscriptionService.cancelUserSubscription(id, userId);
         return ResponseEntity.ok(subscriptionMapper.toDto(subscription));
     }
 }
