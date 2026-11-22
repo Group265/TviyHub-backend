@@ -5,12 +5,17 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
+
+    @Override
+    @EntityGraph(attributePaths = {"payment", "user", "workspace"})
+    List<Subscription> findAll();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -62,4 +67,5 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
             Subscription.SubscriptionStatus status,
             LocalDate date
     );
+
 }
