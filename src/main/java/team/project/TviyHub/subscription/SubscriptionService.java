@@ -11,6 +11,8 @@ import team.project.TviyHub.exception.ConflictException;
 import team.project.TviyHub.exception.ResourceNotFoundException;
 import team.project.TviyHub.payment.Payment;
 import team.project.TviyHub.subscription.dto.SubscriptionRequest;
+import team.project.TviyHub.tariff.Tariff;
+import team.project.TviyHub.tariff.TariffRepository;
 import team.project.TviyHub.user.User;
 import team.project.TviyHub.user.UserRepository;
 import team.project.TviyHub.workspace.Workspace;
@@ -32,6 +34,7 @@ public class SubscriptionService {
     private final SubscriptionRepository subscriptionRepository;
     private final WorkspaceRepository workspaceRepository;
     private final BookingRepository bookingRepository;
+    private final TariffRepository tariffRepository;
     private final UserRepository userRepository;
     private final SubscriptionMapper subscriptionMapper;
     private final EntityManager entityManager;
@@ -65,9 +68,13 @@ public class SubscriptionService {
             throw new ConflictException("Cannot create subscription: this desk already has standard hourly/daily bookings within this period.");
         }
 
+        BigDecimal subscriptionPrice = tariffRepository
+                .findByWorkspaceTypeAndBookingType(Workspace.WorkspaceType.DESK, Tariff.BookingType.SUBSCRIPTION)
+                .map(Tariff::getPrice)
+                .orElse(MONTHLY_SUBSCRIPTION_PRICE);
         Payment pendingPayment = Payment.builder()
                 .status(Payment.PaymentStatus.UNPAID)
-                .amount(MONTHLY_SUBSCRIPTION_PRICE)
+                .amount(subscriptionPrice)
                 .build();
 
         Subscription subscription = subscriptionMapper.toEntity(request);

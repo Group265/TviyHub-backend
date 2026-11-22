@@ -3,6 +3,8 @@ package team.project.TviyHub.closedday;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import team.project.TviyHub.booking.Booking;
+import team.project.TviyHub.booking.BookingRepository;
 import team.project.TviyHub.closedday.dto.ClosedDayRequest;
 import team.project.TviyHub.exception.ConflictException;
 import team.project.TviyHub.exception.ResourceNotFoundException;
@@ -15,6 +17,7 @@ import java.util.List;
 public class ClosedDayService {
 
     private final ClosedDayRepository closedDayRepository;
+    private final BookingRepository bookingRepository;
     private final ClosedDayMapper closedDayMapper;
 
     @Transactional(readOnly = true)
@@ -37,6 +40,13 @@ public class ClosedDayService {
     public ClosedDay createClosedDay(ClosedDayRequest request) {
         if (closedDayRepository.existsById(request.date())) {
             throw new ConflictException("Date " + request.date() + " is already marked as closed");
+        }
+        List<Booking> activeBookings = bookingRepository.findByBookingDateAndStatusIn(
+                request.date(),
+                List.of(Booking.BookingStatus.CONFIRMED, Booking.BookingStatus.PENDING_PAYMENT)
+        );
+        if (!activeBookings.isEmpty()) {
+            throw new ConflictException("Cannot close date " + request.date() + ": there are active bookings on this day");
         }
         ClosedDay closedDay = closedDayMapper.toEntity(request);
         return closedDayRepository.save(closedDay);
