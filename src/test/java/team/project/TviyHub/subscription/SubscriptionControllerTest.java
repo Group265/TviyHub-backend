@@ -170,6 +170,6 @@ public class SubscriptionControllerTest {
                         .with(user("admin@hub.com").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"))
-                .andExpect(jsonPath("$.paymentStatus").value("REFUNDED"));
+                .andExpect(jsonPath("$.paymentStatus").value("REFUND_PENDING"));
     }
 }
