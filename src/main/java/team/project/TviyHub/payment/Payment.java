@@ -60,6 +60,7 @@ public class Payment {
     public enum PaymentStatus {
         UNPAID,
         PAID,
+        REFUND_PENDING,
         REFUNDED
     }
 

@@ -284,6 +284,19 @@ public class PaymentService {
         return maxExpiresAt;
     }
 
+    @Transactional
+    public Payment confirmRefund(Long id) {
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + id));
+
+        if (payment.getStatus() != Payment.PaymentStatus.REFUND_PENDING) {
+            throw new ConflictException("Only payments with REFUND_PENDING status can be confirmed as refunded");
+        }
+
+        payment.setStatus(Payment.PaymentStatus.REFUNDED);
+        return paymentRepository.save(payment);
+    }
+
     private Payment updatePaymentFields(Payment payment, Payment.PaymentStatus status, Payment.PaymentMethod method) {
         payment.setStatus(status);
         payment.setPaymentMethod(method);
