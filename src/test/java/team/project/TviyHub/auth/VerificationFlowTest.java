@@ -250,6 +250,17 @@ class VerificationFlowTest {
 	}
 
 	@Test
+	void emailChangeRejectsTheCurrentAddress() throws Exception {
+		String token = verifiedToken();
+		int sentBefore = mail.sentCount(EMAIL);
+		postAs(token, "/api/users/me/email/request",
+				"{\"newEmail\":\"A@B.com\",\"currentPassword\":\"password123\"}")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.detail").value("New email must be different from the current one"));
+		assertThat(mail.sentCount(EMAIL)).isEqualTo(sentBefore);
+	}
+
+	@Test
 	void resetsForgottenPasswordWithCode() throws Exception {
 		verify(EMAIL);
 		postJson("/api/auth/forgot-password", "{\"email\":\"%s\"}".formatted(EMAIL)).andExpect(status().isNoContent());
