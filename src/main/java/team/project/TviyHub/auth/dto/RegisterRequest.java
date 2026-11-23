@@ -1,5 +1,6 @@
 package team.project.TviyHub.auth.dto;
 
+import team.project.TviyHub.validation.MaxUtf8Bytes;
 import team.project.TviyHub.validation.PersonName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import team.project.TviyHub.validation.PasswordsMatch;
@@ -16,8 +17,8 @@ public record RegisterRequest(
 		@NotBlank @Pattern(regexp = "^\\+[1-9]\\d{6,14}$", message = "must be in international format, e.g. +380671234567") String phone,
 		@Schema(description = "Email, stored in lower case; a verification code is sent to it", example = "olena@example.com")
 		@NotBlank @Email @Size(max = 255) String email,
-		@Schema(description = "Password, 8 to 72 characters", example = "StrongPass123")
-		@NotBlank @Size(min = 8, max = 72) String password,
+		@Schema(description = "Password, 8 to 72 characters (at most 72 bytes in UTF-8: English letters take 1 byte, Ukrainian and Russian 2)", example = "StrongPass123")
+		@NotBlank @Size(min = 8, max = 72) @MaxUtf8Bytes(72) String password,
 		@Schema(description = "The password typed a second time; must be equal to password", example = "StrongPass123")
 		@NotBlank String confirmPassword
 ) {
