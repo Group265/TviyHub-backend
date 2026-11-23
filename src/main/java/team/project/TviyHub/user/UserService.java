@@ -50,6 +50,9 @@ public class UserService {
 	public void requestPasswordChange(Long userId, ChangePasswordRequest request) {
 		User user = findVerified(userId);
 		requireCurrentPassword(user, request.currentPassword());
+		if (request.newPassword().equals(request.currentPassword())) {
+			throw new BadRequestException("New password must be different from the current password");
+		}
 		verificationCodeService.issue(userId, VerificationPurpose.PASSWORD_CHANGE,
 				passwordEncoder.encode(request.newPassword()), user.getEmail());
 	}

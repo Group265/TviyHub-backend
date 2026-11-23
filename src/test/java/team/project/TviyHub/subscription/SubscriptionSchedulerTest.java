@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import team.project.TviyHub.TestcontainersConfig;
+import team.project.TviyHub.booking.BookingRepository;
 import team.project.TviyHub.payment.Payment;
 import team.project.TviyHub.user.Role;
 import team.project.TviyHub.user.User;
@@ -38,6 +39,9 @@ class SubscriptionSchedulerTest {
     private SubscriptionRepository subscriptionRepository;
 
     @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -54,6 +58,8 @@ class SubscriptionSchedulerTest {
 
     @BeforeEach
     void setUp() {
+        // Bookings left by other test classes would block deleting their users
+        bookingRepository.deleteAll();
         subscriptionRepository.deleteAll();
         workspaceRepository.deleteAll();
         userRepository.deleteAll();

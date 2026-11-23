@@ -183,6 +183,24 @@ class VerificationFlowTest {
 	}
 
 	@Test
+	void passwordChangeRejectsNewPasswordEqualToCurrent() throws Exception {
+		String token = verifiedToken();
+		int sentBefore = mail.sentCount(EMAIL);
+		postAs(token, "/api/users/me/password/request",
+				"{\"currentPassword\":\"password123\",\"newPassword\":\"password123\",\"confirmNewPassword\":\"password123\"}")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.detail").value("New password must be different from the current password"));
+		org.assertj.core.api.Assertions.assertThat(mail.sentCount(EMAIL)).isEqualTo(sentBefore);
+		// the session and the old password keep working
+		mockMvc.perform(get("/api/users/me").header("Authorization", "Bearer " + token)).andExpect(status().isOk());
+		login(EMAIL, PASSWORD);
+		// a different password is still accepted
+		postAs(token, "/api/users/me/password/request",
+				"{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\",\"confirmNewPassword\":\"newpassword456\"}")
+				.andExpect(status().isNoContent());
+	}
+
+	@Test
 	void changesPhoneWithCode() throws Exception {
 		String token = verifiedToken();
 		postAs(token, "/api/users/me/phone/request", "{\"newPhone\":\"+380991112233\"}").andExpect(status().isNoContent());

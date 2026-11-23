@@ -69,7 +69,7 @@ public class UserController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@Operation(summary = "Change password: send code", description = "Requires the current password and a verified email. A code is sent to the current email. Accounts created through Google have no password yet: they get 400 and should use forgot-password.")
 	@ApiResponse(responseCode = "204", description = "Code sent")
-	@ApiResponse(responseCode = "400", description = "Validation failed, current password is incorrect or the account has no password")
+	@ApiResponse(responseCode = "400", description = "Validation failed, current password is incorrect, the new password equals the current one, or the account has no password")
 	@ApiResponse(responseCode = "403", description = "Email is not verified")
 	@ApiResponse(responseCode = "429", description = "Code was requested too recently")
 	public void requestPasswordChange(@AuthenticationPrincipal User user, @Valid @RequestBody ChangePasswordRequest request) {
@@ -111,7 +111,7 @@ public class UserController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@Operation(summary = "Change email: send code", description = "Requires the current password and a verified email. A code is sent to the NEW address. Accounts created through Google have no password yet: they get 400 and should use forgot-password.")
 	@ApiResponse(responseCode = "204", description = "Code sent")
-	@ApiResponse(responseCode = "400", description = "Validation failed, current password is incorrect or the account has no password")
+	@ApiResponse(responseCode = "400", description = "Validation failed, current password is incorrect, the new password equals the current one, or the account has no password")
 	@ApiResponse(responseCode = "403", description = "Email is not verified")
 	@ApiResponse(responseCode = "409", description = "Email is already in use")
 	@ApiResponse(responseCode = "429", description = "Code was requested too recently")
