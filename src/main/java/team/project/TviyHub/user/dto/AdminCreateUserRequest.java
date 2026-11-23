@@ -1,5 +1,6 @@
 package team.project.TviyHub.user.dto;
 
+import team.project.TviyHub.validation.MaxUtf8Bytes;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -15,8 +16,8 @@ public record AdminCreateUserRequest(
 		@NotBlank @Pattern(regexp = "^\\+[1-9]\\d{6,14}$", message = "must be in international format, e.g. +380671234567") String phone,
 		@Schema(description = "The email is marked as verified for users created by an admin", example = "ivan@example.com")
 		@NotBlank @Email @Size(max = 255) String email,
-		@Schema(description = "Password, 8 to 72 characters", example = "StrongPass123")
-		@NotBlank @Size(min = 8, max = 72) String password,
+		@Schema(description = "Password, 8 to 72 characters (at most 72 bytes in UTF-8: English letters take 1 byte, Ukrainian and Russian 2)", example = "StrongPass123")
+		@NotBlank @Size(min = 8, max = 72) @MaxUtf8Bytes(72) String password,
 		@Schema(description = "USER or ADMIN", example = "ADMIN")
 		@NotNull Role role
 ) {

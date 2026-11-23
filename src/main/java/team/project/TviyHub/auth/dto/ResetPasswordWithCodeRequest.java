@@ -1,5 +1,6 @@
 package team.project.TviyHub.auth.dto;
 
+import team.project.TviyHub.validation.MaxUtf8Bytes;
 import io.swagger.v3.oas.annotations.media.Schema;
 import team.project.TviyHub.validation.PasswordsMatch;
 import jakarta.validation.constraints.NotBlank;
@@ -12,8 +13,8 @@ public record ResetPasswordWithCodeRequest(
 		@NotBlank String email,
 		@Schema(description = "6-digit code from the password reset email", example = "482913")
 		@NotBlank @Pattern(regexp = "^\\d{6}$", message = "must be a 6-digit code") String code,
-		@Schema(description = "New password, 8 to 72 characters; all sessions are logged out", example = "NewStrongPass456")
-		@NotBlank @Size(min = 8, max = 72) String newPassword,
+		@Schema(description = "New password, 8 to 72 characters (at most 72 bytes in UTF-8: English letters take 1 byte, Ukrainian and Russian 2); all sessions are logged out", example = "NewStrongPass456")
+		@NotBlank @Size(min = 8, max = 72) @MaxUtf8Bytes(72) String newPassword,
 		@Schema(description = "The new password typed a second time; must be equal to newPassword", example = "NewStrongPass456")
 		@NotBlank String confirmNewPassword
 ) {
