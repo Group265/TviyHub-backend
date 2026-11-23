@@ -166,6 +166,15 @@ class AuthControllerTest {
 	}
 
 	@Test
+	void rejectsPhoneWithInternalSpacesHyphensOrBrackets() throws Exception {
+		for (String phone : new String[] {"+380 67 123 4567", "+380-67-123-4567", "+38 (067) 1234567", "+380.67.1234567",
+				"+380671234567 ", "+380 671234567", "380671234567", "++380671234567", "+0671234567"}) {
+			register(body(phone, "a@b.com", "password123"), 400);
+		}
+		org.assertj.core.api.Assertions.assertThat(pendingRepository.count()).isZero();
+	}
+
+	@Test
 	void acceptsInternationalPhone() throws Exception {
 		register(body("+14155552671", "us@b.com", "password123"), 202);
 		register(body("+447911123456", "uk@b.com", "password123"), 202);
