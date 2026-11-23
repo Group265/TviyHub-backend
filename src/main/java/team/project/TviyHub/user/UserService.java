@@ -91,6 +91,9 @@ public class UserService {
 		User user = findVerified(userId);
 		requireCurrentPassword(user, request.currentPassword());
 		String email = request.newEmail().trim().toLowerCase(Locale.ROOT);
+		if (email.equals(user.getEmail())) {
+			throw new BadRequestException("New email must be different from the current one");
+		}
 		if (userRepository.existsByEmailAndIdNot(email, userId)) {
 			throw new ConflictException("Email is already registered");
 		}
