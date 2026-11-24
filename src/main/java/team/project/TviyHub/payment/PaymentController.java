@@ -83,7 +83,7 @@ public class PaymentController {
         return ResponseEntity.ok(paymentMapper.toDto(updatedPayment));
     }
 
-    @PatchMapping("/api/admin/payments/{id}/refund")
+    @PatchMapping("/{id}/refund")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PaymentResponseDto> confirmRefund(@PathVariable Long id) {
         Payment payment = paymentService.confirmRefund(id);
