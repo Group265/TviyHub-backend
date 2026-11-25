@@ -200,6 +200,11 @@ public class SubscriptionService {
             throw new ConflictException("Cannot extend subscription: this desk already has standard hourly/daily bookings within the extension period.");
         }
         subscription.setEndDate(newEndDate);
-        return subscriptionRepository.save(subscription);
+        Subscription saved = subscriptionRepository.save(subscription);
+
+        if (saved.getPayment() != null) {
+            saved.getPayment().getId();
+        }
+        return saved;
     }
 }
