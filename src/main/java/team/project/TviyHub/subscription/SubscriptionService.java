@@ -201,6 +201,7 @@ public class SubscriptionService {
         }
         subscription.setEndDate(newEndDate);
         Subscription saved = subscriptionRepository.save(subscription);
+
         if (saved.getPayment() != null) {
             saved.getPayment().getId();
         }
