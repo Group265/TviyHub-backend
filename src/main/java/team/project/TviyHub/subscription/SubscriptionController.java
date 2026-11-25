@@ -114,8 +114,7 @@ public class SubscriptionController {
             @PathVariable Long id,
             @RequestParam int days
     ) {
-        Subscription subscription = subscriptionService.extendSubscription(id, days);
-        return ResponseEntity.ok(subscriptionMapper.toDto(subscription));
+        return ResponseEntity.ok(subscriptionService.extendSubscription(id, days));
     }
 
     @PatchMapping("/subscriptions/{id}/cancel")

@@ -12,6 +12,7 @@ import team.project.TviyHub.exception.ForbiddenException;
 import team.project.TviyHub.exception.ResourceNotFoundException;
 import team.project.TviyHub.payment.Payment;
 import team.project.TviyHub.subscription.dto.SubscriptionRequest;
+import team.project.TviyHub.subscription.dto.SubscriptionResponse;
 import team.project.TviyHub.tariff.Tariff;
 import team.project.TviyHub.tariff.TariffRepository;
 import team.project.TviyHub.user.User;
@@ -166,7 +167,7 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public Subscription extendSubscription(Long id, int days) {
+    public SubscriptionResponse extendSubscription(Long id, int days) {
         Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + id));
 
@@ -202,9 +203,6 @@ public class SubscriptionService {
         subscription.setEndDate(newEndDate);
         Subscription saved = subscriptionRepository.save(subscription);
 
-        if (saved.getPayment() != null) {
-            saved.getPayment().getId();
-        }
-        return saved;
+        return subscriptionMapper.toDto(saved);
     }
 }
