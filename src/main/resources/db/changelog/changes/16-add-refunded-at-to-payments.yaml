@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: 16-add-refunded-at-to-payments
+      author: acidden
+      changes:
+        - addColumn:
+            tableName: payments
+            columns:
+              - column:
+                  name: refunded_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: true

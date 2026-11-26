@@ -294,6 +294,7 @@ public class PaymentService {
         }
 
         payment.setStatus(Payment.PaymentStatus.REFUNDED);
+        payment.setRefundedAt(LocalDateTime.now());
         return paymentRepository.save(payment);
     }
 

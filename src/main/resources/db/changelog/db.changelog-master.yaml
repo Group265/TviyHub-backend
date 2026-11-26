@@ -29,5 +29,7 @@ databaseChangeLog:
       file: db/changelog/changes/14-add-created-at-to-bookings.yaml
   - include:
       file: db/changelog/changes/15-drop-unique-external-tx-id.yaml
+  - include:
+      file: db/changelog/changes/16-add-refunded-at-to-payments
 
 

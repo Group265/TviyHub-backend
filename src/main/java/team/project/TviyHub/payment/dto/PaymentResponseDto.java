@@ -10,6 +10,7 @@ public record PaymentResponseDto(
         Payment.PaymentStatus status,
         BigDecimal amount,
         LocalDateTime paidAt,
+        LocalDateTime refundedAt,
         Payment.PaymentMethod paymentMethod,
         String externalTransactionId,
         Long bookingId,
